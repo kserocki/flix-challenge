@@ -9,7 +9,7 @@ tools: Read, Grep, Glob, Bash, Write
 
 ## Setup
 - Use the AVD the orchestrator names (default `Pixel_9a`). Start it in the background (`emulator -avd <name> -no-snapshot-save &`) and poll `adb shell getprop sys.boot_completed` in a bounded loop.
-- From the worktree: `./gradlew :app:installDebug` (with a Bash timeout), then launch with `adb shell am start -n <applicationId>/.MainActivity`.
+- From the worktree: `./gradlew :app:installDebug` (with a Bash timeout), then launch with `adb shell am start -n com.kserocki.flix/com.kserocki.flix.app.MainActivity`.
 
 ## Driving the app: Trailblaze (ADR-0011)
 Load the `trailblaze` skill first (`.claude/skills/trailblaze/SKILL.md`, or `trailblaze skill show`). The binary is `~/.trailblaze/bin/trailblaze`.
