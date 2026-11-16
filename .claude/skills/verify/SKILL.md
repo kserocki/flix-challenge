@@ -19,7 +19,7 @@ Run from the repo root (or the worktree root), always with a Bash `timeout` (at 
 ## Before a commit that ends a work package, and before qa/review
 ```bash
 ./gradlew check :app:assembleDebug
-./gradlew :core:domain:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test   # macOS only
+./gradlew iosSimulatorArm64Test compileKotlinIosArm64   # macOS only (ADR-0008)
 ```
 
 ## UI changes (before review)

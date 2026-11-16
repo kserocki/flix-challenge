@@ -66,17 +66,20 @@ docs/                         Architecture, ADRs, domain knowledge
 
 | What | Command | Status |
 |---|---|---|
-| Every gate (detekt, Konsist, unit tests, lint) | `./gradlew check` | set up in #1 |
-| Build debug APK + compile iOS targets | `./gradlew :app:assembleDebug :core:data:compileKotlinIosSimulatorArm64` | set up in #1 |
-| Unit tests of one module | `./gradlew :core:domain:allTests` (KMP) · `./gradlew :feature:timetable:impl:testDebugUnitTest` (Android) | set up in #1 |
-| Detekt only | `./gradlew detekt` | set up in #1 |
-| Konsist only | `./gradlew :konsist-tests:test` | set up in #1 |
-| Install + launch on emulator | `./gradlew :app:installDebug && adb shell am start -n <applicationId>/.MainActivity` | set up in #1 |
+| Every gate (detekt, Konsist, unit tests, lint) | `./gradlew check` | works |
+| Build debug APK + compile iOS targets | `./gradlew :app:assembleDebug :core:data:compileKotlinIosSimulatorArm64` | works |
+| Unit tests of one module | `./gradlew :core:domain:allTests` (KMP) · `./gradlew :feature:timetable:impl:testDebugUnitTest` (Android) | works |
+| Detekt only | `./gradlew detekt` | works |
+| Konsist only | `./gradlew :konsist-tests:test` | works |
+| Install + launch on emulator | `./gradlew :app:installDebug && adb shell am start -n com.kserocki.flix/com.kserocki.flix.app.MainActivity` | works |
 | Drive the app / save a trail (qa) | `trailblaze device connect android` · `trailblaze snapshot` · `trailblaze tool tap ref=<ref> -s "<intent>"` · `trailblaze session save -t "<scenario>"` (skill: `trailblaze`, ADR-0011) | works (v2026.11.12) |
-| Replay UI trails (emulator running, app installed) | `trailblaze run trails/<scenario>` | set up in #1 |
+| Replay UI trails (emulator running, app installed) | `trailblaze run trails/<scenario>` | works |
+| iOS tests + device compile | `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` (macOS only) | works |
 | Hit the real API | see `docs/domain/API.md` (curl with computed `from`/`to`) | works |
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux and the iOS compilation on macOS. Reproduce a CI failure locally with the same command.
+A KMP module's Android unit test task is `:<module>:testAndroidHostTest` (JVM, fast, no simulator); `:<module>:allTests` runs that plus the iOS simulator tests, so it only works on macOS.
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux and `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` on macOS. Reproduce a CI failure locally with the same command.
 
 ## 6. Skills (`.claude/skills/`)
 
