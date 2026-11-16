@@ -1,0 +1,20 @@
+config:
+  devices:
+    android:
+      driver: ANDROID_ONDEVICE_ACCESSIBILITY
+  title: app-launch
+
+trail:
+  - step: "Open the Flix Timetable app"
+    recording:
+      android:
+        - openApp:
+            appId: com.kserocki.flix
+
+  - step: "The Flix Timetable placeholder title is visible"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Flix Timetable
