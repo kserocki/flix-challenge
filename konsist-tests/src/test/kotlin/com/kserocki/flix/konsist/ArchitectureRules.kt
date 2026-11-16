@@ -9,18 +9,16 @@ import com.lemonappdev.konsist.api.verify.assertTrue
 // AGENTS.md §3, rules 1-5 (ADR-0005). Each rule is a KoScope extension so it runs against both
 // the real project scope and a fixture scope that proves it fails.
 
-private val domainForbiddenImportPrefixes = listOf("io.ktor.", "android.", "androidx.", "org.jetbrains.compose.")
+private val domainForbiddenImportPrefixes =
+    listOf("io.ktor.", "android.", "androidx.", "org.jetbrains.compose.", "org.koin.")
 private val featurePackageRegex = Regex("""^com\.kserocki\.flix\.feature\.([^.]+)\.impl(\..*)?$""")
 
-/** Rule 1: `core:domain` imports nothing from Ktor, Compose, Android/AndroidX or Koin except annotations. */
+/** Rule 1: `core:domain` imports nothing from Ktor, Compose, Android, AndroidX or Koin. */
 fun KoScope.assertDomainHasNoFrameworkImports() {
     files
         .withPackage("com.kserocki.flix.core.domain..")
         .assertFalse { file ->
-            file.hasImport { import ->
-                domainForbiddenImportPrefixes.any { import.hasNameStartingWith(it) } ||
-                    (import.hasNameStartingWith("org.koin.") && !import.hasNameStartingWith("org.koin.core.annotation"))
-            }
+            file.hasImport { import -> domainForbiddenImportPrefixes.any { import.hasNameStartingWith(it) } }
         }
 }
 

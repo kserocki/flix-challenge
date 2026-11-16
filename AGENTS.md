@@ -42,7 +42,7 @@ docs/                         Architecture, ADRs, domain knowledge
 
 ## 3. Architecture rules (Konsist enforces 1–5 in `./gradlew check`, 6 by review)
 
-1. `core:domain` is pure Kotlin: no Ktor, Compose, `android.*` or `androidx.*` imports. From Koin, only `org.koin.core.annotation.*` is allowed (ADR-0003).
+1. `core:domain` is pure Kotlin: no Ktor, Compose, Koin, `android.*` or `androidx.*` imports.
 2. `feature:*:impl` never depends on another `feature:*:impl`. It navigates only through `feature:*:api` NavKeys.
 3. `feature:*:impl` never depends on `core:data`. It sees domain interfaces and use cases only.
 4. DTOs (`*Dto`) live only in `core:data`. Mapping is explicit (`toDomain()`).
@@ -56,7 +56,7 @@ docs/                         Architecture, ADRs, domain knowledge
 - **Repositories:** interface in `core:domain` (`DepartureRepository`), implementation in `core:data` (`NetworkDepartureRepository`).
 - **Errors:** repositories and use cases return `Result<T, DomainError>` (our own type in `core:common`, not `kotlin.Result`). No exceptions across layer boundaries. Never swallow `CancellationException` (use `suspendRunCatching`).
 - **Time:** `kotlin.time.Instant` for points in time and `kotlinx.datetime.TimeZone` for zones. Never call `Clock.System` directly outside DI: inject `Clock` so tests control "now". Departure times are shown in the **station's** time zone, never the device's (`docs/domain/TIMETABLE_RULES.md`).
-- **DI (Koin annotations + compiler plugin, ADR-0003):** each module with bindings has one `@Module @ComponentScan("<module root package>")` class. Annotate classes with `@Single` (repositories, HTTP client holders), `@Factory` (use cases) and `@KoinViewModel` (ViewModels). Provider functions only for third-party types (`HttpClient`, `Json`, `Clock`).
+- **DI (Koin annotations + compiler plugin, ADR-0003):** each module that owns classes with bindings has one `@Module @ComponentScan("<module root package>")` class. Annotate classes with `@Single` (repositories, HTTP client holders) and `@KoinViewModel` (ViewModels). Provider functions are for third-party types (`HttpClient`, `Json`, `Clock`) **and**, because `core:domain` is Koin-free (option D), for every domain use case: one `@Factory` provider function per use case in `app`'s `DomainModule` (ADR-0003).
 - **Strings:** all user-visible text in `strings.xml`. No hard-coded UI strings, colours or dimensions outside `core:designsystem`.
 - **Tests:** `kotlin.test` + `kotlinx-coroutines-test` + Turbine. Fakes over mocks (fakes live in `core:testing`). Test names in backticks describe behaviour: `` `shows empty state when no departures in window` ``.
 - **Comments:** English, only for non-obvious logic, 1–3 lines. No ticket numbers except `TODO(#N)` pointing at an open GitHub issue.

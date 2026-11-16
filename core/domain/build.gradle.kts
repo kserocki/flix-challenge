@@ -6,8 +6,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.core.common)
-            implementation(libs.kotlinx.datetime)
-            implementation(libs.koin.annotations)
+            api(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(projects.core.testing)

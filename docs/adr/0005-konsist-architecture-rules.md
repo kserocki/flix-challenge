@@ -4,7 +4,7 @@
 
 ## Decision
 A `konsist-tests` JVM module runs as part of `./gradlew check`. It keeps a **small** set of rules (AGENTS.md §3, rules 1–5):
-1. `core:domain` imports nothing from Ktor, Compose, Android or AndroidX, and from Koin only `org.koin.core.annotation`.
+1. `core:domain` imports nothing from Ktor, Compose, Android, AndroidX or Koin.
 2. No `feature:*:impl` imports another feature's `impl` package.
 3. No `feature:*:impl` imports `core:data`.
 4. Classes ending in `Dto` live only in `core:data`.

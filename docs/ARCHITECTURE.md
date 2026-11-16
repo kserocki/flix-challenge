@@ -24,12 +24,12 @@ Clean Architecture in three layers, with dependencies pointing inwards to the do
 
 | Module | Type | Depends on | Contains |
 |---|---|---|---|
-| `app` | Android application | everything below | `FlixApplication` (Koin start), `MainActivity`, Nav3 `NavDisplay`, entry registration |
+| `app` | Android application | everything below | `FlixApplication` (Koin start), `MainActivity`, Nav3 `NavDisplay`, entry registration, `DomainModule` (use-case providers) |
 | `feature:timetable:api` | Android library | – | `TimetableNavKey` |
 | `feature:timetable:impl` | Android library | `feature:timetable:api`, `core:domain`, `core:common`, `core:designsystem` | `TimetableViewModel`, `TimetableUiState/Intent`, `TimetableScreen/Content`, UI mappers (domain → UI model) |
 | `core:domain` | KMP | `core:common` | `Station`, `Departure`, `StationTimetable`, `DepartureRepository`, `GetStationTimetableUseCase`, `DomainError` |
 | `core:data` | KMP | `core:domain`, `core:common` | `FlixApiClient`, `DeparturesResponseDto`, `toDomain()` mappers, `NetworkDepartureRepository`, Ktor engine per platform (OkHttp / Darwin) |
-| `core:common` | KMP | – | `Result<T, E>`, `suspendRunCatching`, `DispatcherProvider` |
+| `core:common` | KMP | – | `Result<T, E>`, `suspendRunCatching` |
 | `core:designsystem` | Android library | – | `FlixTheme`, colour/spacing/type tokens, shared components (error/empty states) |
 | `core:testing` | KMP | `core:domain`, `core:common` | `FakeDepartureRepository`, `TestClock`, fixture builders |
 | `konsist-tests` | JVM | – | Architecture rules over all sources |
@@ -43,21 +43,22 @@ Only the domain and data layers are shared through KMP, by design (ADR-0002). Pr
 User ──Intent──► TimetableViewModel.onIntent()
                         │
                         ▼
-              GetStationTimetableUseCase(now = clock.now())
-                        │  computes window [now, now + 2h]
+              GetStationTimetableUseCase()
+                        │  reads clock.now(), computes window [now, now + 2h]
                         ▼
-              DepartureRepository.getTimetable(stationId, window)
+              DepartureRepository.getTimetable(window)
                         │
                         ▼
               FlixApiClient (Ktor) ──► DTO ──toDomain()──► StationTimetable
                         │
                         ▼
               Result<StationTimetable, DomainError>
-                        │
+                        │  the use case dedups by id (TT-6) and stable-sorts by scheduledAt (TT-5)
                         ▼
       ViewModel reduces it into TimetableUiState (StateFlow) ──► TimetableContent renders
 ```
 
+- The use case takes no parameters: it reads the clock itself on every call, and the station id is data-layer config (TT-3), not a use-case argument.
 - State is the single source of truth for the UI. Composables never call use cases.
 - The ViewModel maps domain models to **UI models** (formatted time in the station zone, day headers). Formatting is presentation logic, and it is unit tested.
 
@@ -65,7 +66,7 @@ User ──Intent──► TimetableViewModel.onIntent()
 
 - Ktor exceptions are caught **only** in `core:data` (with `suspendRunCatching`, which rethrows `CancellationException`) and mapped to `DomainError`:
   - `DomainError.Network`: no connectivity, timeout.
-  - `DomainError.Server(code)`: HTTP 5xx or an unexpected status.
+  - `DomainError.Server(code)`: any non-2xx HTTP status (4xx/5xx).
   - `DomainError.InvalidData`: malformed JSON, unknown time zone id, missing mandatory fields.
 - Use cases and repositories return `Result<T, DomainError>`. No exceptions cross a layer boundary.
 - The UI maps each `DomainError` to a user-facing message with a retry action.
@@ -80,8 +81,8 @@ User ──Intent──► TimetableViewModel.onIntent()
 ## 6. Dependency injection
 
 Koin with annotations and the Koin compiler plugin (ADR-0003). This gives compile-time checks of the graph and no hand-written module DSL.
-- One `@Module @ComponentScan` per module that has bindings (`DomainModule`, `DataModule`, `TimetableModule`, `AppModule`).
-- `core:domain` uses only `koin-annotations` (annotations only, no runtime). This is an accepted trade-off, see ADR-0003.
+- One `@Module @ComponentScan` per module that owns classes with bindings (`DataModule`, `TimetableModule`, `AppModule`).
+- `core:domain` has no Koin dependency at all; `app`'s `DomainModule` (plain `@Module`, no `@ComponentScan`) provides each use case through an explicit `@Factory` function (ADR-0003, option D).
 - `app` starts Koin with every module.
 
 ## 7. Navigation

@@ -34,6 +34,13 @@ class ArchitectureRulesTest {
     }
 
     @Test
+    fun `domain rule fails on a koin annotation import`() {
+        assertFailsWith<KoAssertionFailedException> {
+            fixtureScope("rule1-koin").assertDomainHasNoFrameworkImports()
+        }
+    }
+
+    @Test
     fun `feature impl does not import another feature impl`() {
         projectScope.assertFeatureImplDoesNotImportAnotherFeatureImpl()
     }
