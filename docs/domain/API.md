@@ -11,7 +11,7 @@ GET https://global.api.flixbus.com/gis/v2/timetable/{stationId}/departures?from=
 | `stationId` | `dcbaaee6-9603-11e6-9066-549f350fcb0c` (Berlin central bus station) |
 | `from` | now, ISO-8601 UTC with ms, for example `2026-03-05T14:11:51.485Z` |
 | `to` | now + 2h, same format |
-| `apiKey` | `e8d85577-2fb3-4d44-8091-ffb3da46e9ce` (a public constant from the brief, kept in `BuildConfig`/data config, not in UI code) |
+| `apiKey` | `e8d85577-2fb3-4d44-8091-ffb3da46e9ce` (a public constant from the brief, kept in `core:data`'s internal `FlixApiConfig` next to the station id and base URL, so the multiplatform data layer is complete on every platform. It isn't a secret: it ships in the client either way) |
 
 Check it by hand:
 
@@ -44,6 +44,7 @@ Everything else is ignored (`ignoreUnknownKeys = true`). DTOs declare only these
 ## Errors to expect
 | Situation | Mapped to |
 |---|---|
-| No network / DNS / timeout | `DomainError.Network` |
-| HTTP 4xx/5xx | `DomainError.Server(code)` |
-| Malformed JSON, missing `station`, invalid time zone | `DomainError.InvalidData` |
+| No network / DNS / timeout (any I/O error, incl. Darwin errors on iOS) | `DomainError.Network` |
+| HTTP 4xx/5xx. Observed: 401 bad key, 400 missing params, 404 unknown station | `DomainError.Server(code)` |
+| Malformed or non-JSON body, missing `station`, missing/`null` `rides`, invalid time zone (TT-9), every ride broken (TT-16a) | `DomainError.InvalidData` |
+| Any other unexpected exception at the data boundary | `DomainError.InvalidData` (fallback; `CancellationException` is always rethrown) |

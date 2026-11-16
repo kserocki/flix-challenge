@@ -15,7 +15,7 @@ The behaviour the app must have. Every rule has an id, so tests and reviews can 
 ## Time zones
 - **TT-7** Departure time is converted with `station.timezone` from the response, **never** with the device zone. A device in `America/New_York` shows Berlin departures in Berlin time.
 - **TT-8** The station header shows the station name and the zone's short label for the first departure's instant (or for `now` if the list is empty), for example `CET`/`CEST`. If no short label can be derived, show the IANA id (`Europe/Berlin`).
-- **TT-9** If the time zone is missing or isn't a valid IANA id, the response counts as invalid data (`DomainError.InvalidData`). We never fall back to UTC or to the device zone silently, because showing a wrong time is worse than showing an error.
+- **TT-9** If the time zone is missing, blank or can't be resolved by kotlinx-datetime, the response counts as invalid data (`DomainError.InvalidData`). Resolvable non-region ids (`UTC`, `+01:00`) are accepted, because they still give correct times. We never fall back to UTC or to the device zone silently, because showing a wrong time is worse than showing an error.
 
 ## Days
 - **TT-10** When the window crosses midnight **in the station zone**, departures are grouped under day headers (`Today`, `Tomorrow`). If all departures fall on the same station-local day as `now`, no header is shown.
@@ -28,5 +28,7 @@ The behaviour the app must have. Every rule has an id, so tests and reviews can 
 - **TT-15** Rotation and process recreation don't trigger a new network call if data is already loaded (the state lives in the ViewModel).
 
 ## Data tolerance
-- **TT-16** A single ride with missing `line.code`, `line.direction` or `status.scheduled_timestamp` is **skipped**, not fatal. The rest of the list still shows. The skipped rides are logged in debug builds.
+- **TT-16** A single ride that can't be shown is **skipped**, not fatal, and the rest of the list still shows. A ride can't be shown when it has no `line` or `status` object, when `id`, `line.code` or `line.direction` is missing or blank, or when `status.scheduled_timestamp` is missing or unparseable. Skipped rides are logged in debug builds.
+- **TT-16a** If `rides` is non-empty but **every** ride is skipped, the response counts as `DomainError.InvalidData`, not an empty board. Showing "No departures" for broken data would mislead.
+- **TT-16b** `"rides": []` is a valid empty board (TT-12). A missing or `null` `rides` key or a missing `station` is `DomainError.InvalidData`.
 - **TT-17** Unknown JSON fields are ignored (the API returns many: `calls`, `location`, `vehicle`, …).
