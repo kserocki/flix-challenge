@@ -5,5 +5,5 @@ plugins {
 
 dependencies {
     api(libs.navigation3.runtime)
-    implementation(libs.kotlinx.serialization.core)
+    api(libs.kotlinx.serialization.core)
 }
