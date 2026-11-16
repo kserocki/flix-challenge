@@ -12,5 +12,6 @@
 | [0008](0008-github-actions-ci-and-github-issues.md) | GitHub Actions CI and GitHub Issues as the tracker |
 | [0009](0009-networking-serialization-and-typed-errors.md) | Ktor, kotlinx-serialization and typed errors |
 | [0010](0010-station-time-zone-for-departure-times.md) | Departure times in the station time zone, never a silent fallback |
+| [0011](0011-trailblaze-for-ui-testing.md) | Trailblaze for agent-driven UI testing and replayable trails |
 
 New ADR: copy the shape (title, status + date, context, decision, alternatives, consequences), take the next number, add it here.
