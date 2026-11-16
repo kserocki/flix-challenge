@@ -66,7 +66,7 @@ User ──Intent──► TimetableViewModel.onIntent()
 
 - Ktor exceptions are caught **only** in `core:data` (with `suspendRunCatching`, which rethrows `CancellationException`) and mapped to `DomainError`:
   - `DomainError.Network`: no connectivity, timeout.
-  - `DomainError.Server(code)`: HTTP 5xx or an unexpected status.
+  - `DomainError.Server(code)`: any non-2xx HTTP status (4xx/5xx).
   - `DomainError.InvalidData`: malformed JSON, unknown time zone id, missing mandatory fields.
 - Use cases and repositories return `Result<T, DomainError>`. No exceptions cross a layer boundary.
 - The UI maps each `DomainError` to a user-facing message with a retry action.
