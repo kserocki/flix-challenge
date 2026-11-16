@@ -35,6 +35,7 @@ core/testing       (KMP)      Fakes, test dispatcher rule, fixture builders
 build-logic/                  Convention plugins (flix.*)
 konsist-tests/                Architecture rules (Konsist), run by ./gradlew check
 config/detekt/                Detekt config incl. Compose rules
+trails/                       Trailblaze UI trails, replayable on the emulator (ADR-0011)
 docs/                         Architecture, ADRs, domain knowledge
 .claude/                      Agents, skills, git-ignored work folders
 ```
@@ -65,15 +66,20 @@ docs/                         Architecture, ADRs, domain knowledge
 
 | What | Command | Status |
 |---|---|---|
-| Every gate (detekt, Konsist, unit tests, lint) | `./gradlew check` | set up in #1 |
-| Build debug APK + compile iOS targets | `./gradlew :app:assembleDebug :core:data:compileKotlinIosSimulatorArm64` | set up in #1 |
-| Unit tests of one module | `./gradlew :core:domain:allTests` (KMP) · `./gradlew :feature:timetable:impl:testDebugUnitTest` (Android) | set up in #1 |
-| Detekt only | `./gradlew detekt` | set up in #1 |
-| Konsist only | `./gradlew :konsist-tests:test` | set up in #1 |
-| Install + launch on emulator | `./gradlew :app:installDebug && adb shell am start -n <applicationId>/.MainActivity` | set up in #1 |
+| Every gate (detekt, Konsist, unit tests, lint) | `./gradlew check` | works |
+| Build debug APK + compile iOS targets | `./gradlew :app:assembleDebug :core:data:compileKotlinIosSimulatorArm64` | works |
+| Unit tests of one module | `./gradlew :core:domain:allTests` (KMP) · `./gradlew :feature:timetable:impl:testDebugUnitTest` (Android) | works |
+| Detekt only | `./gradlew detekt` | works |
+| Konsist only | `./gradlew :konsist-tests:test` | works |
+| Install + launch on emulator | `./gradlew :app:installDebug && adb shell am start -n com.kserocki.flix/com.kserocki.flix.app.MainActivity` | works |
+| Drive the app / save a trail (qa) | `trailblaze device connect android` · `trailblaze snapshot` · `trailblaze tool tap ref=<ref> -s "<intent>"` · `trailblaze session save -t "<scenario>"` (skill: `trailblaze`, ADR-0011) | works (v2026.11.12) |
+| Replay UI trails (emulator running, app installed) | `trailblaze run trails/<scenario>` | works |
+| iOS tests + device compile | `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` (macOS only) | works |
 | Hit the real API | see `docs/domain/API.md` (curl with computed `from`/`to`) | works |
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux and the iOS compilation on macOS. Reproduce a CI failure locally with the same command.
+A KMP module's Android unit test task is `:<module>:testAndroidHostTest` (JVM, fast, no simulator); `:<module>:allTests` runs that plus the iOS simulator tests, so it only works on macOS.
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux and `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` on macOS. Reproduce a CI failure locally with the same command.
 
 ## 6. Skills (`.claude/skills/`)
 
@@ -82,6 +88,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assem
 | `implement` | implementing a GitHub issue (`#N`) with the agent team, from plan to PR |
 | `new-feature` | adding a screen or a `feature:*:{api,impl}` module |
 | `verify` | before every commit and PR |
+| `trailblaze` | driving the app on the emulator, saving and replaying trails (vendored from the Trailblaze CLI, don't edit) |
 
 ## 7. Agent team (`.claude/agents/`)
 
@@ -93,7 +100,7 @@ The orchestrator (main session) is also the **PO**: it owns `docs/domain/`, talk
 | `core-dev` | Sonnet | KMP `core:*` modules, ViewModels and use cases, build-logic, CI |
 | `ui-dev` | Sonnet | `core:designsystem`, `XScreen`/`XContent`, previews, resources, `app` shell |
 | `consultant` | Opus | Advises stuck implementers (KMP, Koin, Compose, Gradle). Never writes production code. |
-| `qa` | Sonnet | Runs the app on the emulator, walks test scenarios, captures screenshots. Never fixes code. |
+| `qa` | Sonnet | Drives the app on the emulator with Trailblaze, walks test scenarios, saves trails and screenshots. Never fixes code. |
 | `reviewer` | Opus | Reviews the diff against plan, docs and this file: `APPROVED` or `CHANGES_REQUESTED` |
 
 ## 8. Definition of done

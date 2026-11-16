@@ -15,3 +15,7 @@ captures/
 # Agent work folders (plans, logs, media) stay local
 .claude/work/
 .claude/settings.local.json
+
+# Trailblaze CLI local state (absolute paths, run logs) - ADR-0011
+.trailblaze/
+logs/
