@@ -5,7 +5,7 @@
 ## Context
 We need DI that works in KMP modules and Android, is light, and is checked at compile time. The user asked for Koin with annotations (`@KoinViewModel`).
 
-The original decision let `core:domain` depend on `koin-annotations` so use cases could carry `@Factory`. Issue #2 (domain layer) revisited this: AGENTS.md §0 says `core:domain` must stay pure Kotlin, and "annotations carry no behaviour" turned out not to hold in practice (see the spike below), so the trade-off was re-spiked and the decision amended to **option D**.
+The original decision let `core:domain` depend on `koin-annotations` so use cases could carry `@Factory`. Issue #2 (domain layer) revisited this: AGENTS.md §3 rule 1 says `core:domain` must stay pure Kotlin, and "annotations carry no behaviour" turned out not to hold in practice (see the spike below), so the trade-off was re-spiked and the decision amended to **option D**.
 
 ### Spike evidence (Koin 4.2.2, compiler plugin 1.2.3, Kotlin 2.4.21)
 | Variant | Result |
@@ -27,7 +27,7 @@ The Koin compiler plugin's own docs confirm this: *"every Gradle module that dec
 - Hilt: Android-only, can't be used in KMP `commonMain`.
 - Koin DSL only: no compile-time safety.
 - Manual DI: fine for one screen, but it doesn't scale and isn't what was asked.
-- Applying the Koin compiler plugin to `core:domain` so use cases can carry `@Factory` directly (the original decision): works, but it puts Koin's runtime and plugin inside the domain module, which AGENTS.md §0 and ADR-0005 rule 1 forbid.
+- Applying the Koin compiler plugin to `core:domain` so use cases can carry `@Factory` directly (the original decision): works, but it puts Koin's runtime and plugin inside the domain module, which AGENTS.md §3 rule 1 and ADR-0005 rule 1 forbid.
 
 ## Consequences
 - + `core:domain` is pure Kotlin with zero Koin dependency, compiles identically for Android and iOS, and Konsist forbids every `org.koin` import there (ADR-0005 rule 1).
