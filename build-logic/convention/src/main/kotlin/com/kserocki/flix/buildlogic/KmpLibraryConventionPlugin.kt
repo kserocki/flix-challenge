@@ -1,0 +1,36 @@
+package com.kserocki.flix.buildlogic
+
+import com.kserocki.flix.buildlogic.android.configureAndroidLibraryTarget
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.named
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+
+/**
+ * Base convention for every shared KMP module: Kotlin Multiplatform plus the AGP 9 Android KMP
+ * library target (via `configureAndroidLibraryTarget`) and the two Apple-silicon iOS targets.
+ * Also applies `flix.quality`.
+ */
+class KmpLibraryConventionPlugin : Plugin<Project> {
+    override fun apply(target: Project) {
+        with(target) {
+            pluginManager.apply("org.jetbrains.kotlin.multiplatform")
+            pluginManager.apply("com.android.kotlin.multiplatform.library")
+            pluginManager.apply("flix.quality")
+
+            extensions.configure<KotlinMultiplatformExtension> {
+                iosArm64()
+                iosSimulatorArm64()
+
+                configureAndroidLibraryTarget(this)
+
+                sourceSets.named("commonTest") {
+                    dependencies {
+                        implementation(libs.findLibrary("kotlin-test").get())
+                    }
+                }
+            }
+        }
+    }
+}
