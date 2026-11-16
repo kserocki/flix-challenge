@@ -61,32 +61,23 @@ class GetStationTimetableUseCaseTest {
 
     @Test
     fun `keeps API order for departures scheduled at the same time`() = runTest {
-        val first = aDeparture(id = "1", lineCode = "100", scheduledAt = now)
-        val second = aDeparture(id = "2", lineCode = "200", scheduledAt = now)
-        val repository = departureRepositoryReturning(first, second)
+        val tieTime = now + 1.hours
+        val tieA = aDeparture(id = "1", lineCode = "100", scheduledAt = tieTime)
+        val tieB = aDeparture(id = "2", lineCode = "200", scheduledAt = tieTime)
+        val earlier = aDeparture(id = "3", lineCode = "300", scheduledAt = now)
+        val tieC = aDeparture(id = "4", lineCode = "400", scheduledAt = tieTime)
+        val repository = departureRepositoryReturning(tieA, tieB, earlier, tieC)
         val useCase = GetStationTimetableUseCase(repository, TestClock(now))
 
         val result = useCase().successValue()
 
-        assertEquals(listOf(first, second), result.departures)
-    }
-
-    @Test
-    fun `shows a ride with a repeated id only once`() = runTest {
-        val departure = aDeparture(id = "1")
-        val repeated = departure.copy(lineCode = "999")
-        val repository = departureRepositoryReturning(departure, repeated)
-        val useCase = GetStationTimetableUseCase(repository, TestClock(now))
-
-        val result = useCase().successValue()
-
-        assertEquals(1, result.departures.size)
+        assertEquals(listOf(earlier, tieA, tieB, tieC), result.departures)
     }
 
     @Test
     fun `keeps the first occurrence of a repeated ride`() = runTest {
-        val first = aDeparture(id = "1", lineCode = "100")
-        val repeated = aDeparture(id = "1", lineCode = "999")
+        val first = aDeparture(id = "1", lineCode = "100", scheduledAt = now + 1.hours)
+        val repeated = aDeparture(id = "1", lineCode = "999", scheduledAt = now)
         val repository = departureRepositoryReturning(first, repeated)
         val useCase = GetStationTimetableUseCase(repository, TestClock(now))
 
