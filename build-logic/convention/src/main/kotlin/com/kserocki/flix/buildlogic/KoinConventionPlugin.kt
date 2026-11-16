@@ -24,8 +24,6 @@ class KoinConventionPlugin : Plugin<Project> {
                     }
                 }
             } else {
-                val koinBom = libs.findLibrary("koin-bom").get()
-                dependencies.add("implementation", dependencies.platform(koinBom))
                 dependencies.add("implementation", libs.findLibrary("koin-core").get())
                 dependencies.add("implementation", libs.findLibrary("koin-annotations").get())
             }
