@@ -1,0 +1,17 @@
+# Gradle / build
+.gradle/
+build/
+.kotlin/
+local.properties
+captures/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Agent work folders (plans, logs, media) stay local
+.claude/work/
+.claude/settings.local.json
