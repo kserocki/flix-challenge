@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window theme only: Compose draws the real UI with FlixTheme. This just picks the
+         cold-start window background so it matches the system's day/night mode instead of
+         always flashing light. -->
+    <style name="Theme.Flix" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
