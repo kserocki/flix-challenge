@@ -18,11 +18,7 @@ internal fun Project.configureDetekt() {
 
     extensions.configure<DetektExtension> {
         buildUponDefaultConfig.set(true)
-        allRules.set(false)
         parallel.set(true)
-        ignoreFailures.set(false)
-        autoCorrect.set(false)
-        disableDefaultRuleSets.set(false)
         config.setFrom(detektConfigFile)
         basePath.set(repoRoot)
         source.setFrom(moduleSourceDirectories)
