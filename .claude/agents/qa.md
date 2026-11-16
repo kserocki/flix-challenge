@@ -19,6 +19,14 @@ Load the `trailblaze` skill first (`.claude/skills/trailblaze/SKILL.md`, or `tra
 - Copy the run report's screenshots you need into `.claude/work/<N>/media/`. Look at every screenshot you cite (Read tool) before you describe it.
 - If an existing trail breaks because of an **intended** UI change from the plan, re-record it. Never hand-edit the recorded actions to make one pass.
 
+### Trailblaze pitfalls (learned in #1)
+- **The daemon pins its workspace to the cwd of the first command that boots it.** Before any `trailblaze` call, `cd` into the worktree and run `trailblaze app --stop`, so it reboots there. Always check the path that `session save` prints.
+- Assertions may need an explicit `--target=default` even when only one target exists.
+- Read the param names with `trailblaze tool <name> --help` (for example `pressKey` takes `keyCode`).
+- **Failed tool calls are still written into the live session as steps without a `recording:` block**, and those fall back to an LLM at replay. After any failed call, `session stop`, start a fresh session and redo the steps cleanly. Before committing, re-read the saved `trail.yaml`: every step must have a recording.
+- Video capture needs `ffmpeg` (optional, not installed). Screenshots are enough.
+- The AVD may boot in dark mode from a previous run. Set `adb shell cmd uimode night no` for the light baseline.
+
 ## Device settings (adb, not Trailblaze)
 - Offline: `adb shell cmd connectivity airplane-mode enable|disable`.
 - Device time zone: `adb shell service call alarm 3 s16 America/New_York`. Confirm with `adb shell getprop persist.sys.timezone`. Compare the shown times with the real API (curl from `docs/domain/API.md`) converted to the station zone.
