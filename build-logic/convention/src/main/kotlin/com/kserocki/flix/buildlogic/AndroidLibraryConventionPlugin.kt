@@ -37,6 +37,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             }
 
             dependencies.add("testImplementation", libs.findLibrary("kotlin-test").get())
+            // AGP 9's built-in Kotlin doesn't infer a JUnit binding for kotlin-test the way KGP does.
+            dependencies.add("testImplementation", libs.findLibrary("kotlin-test-junit").get())
         }
     }
 }
