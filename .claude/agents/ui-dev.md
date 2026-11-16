@@ -11,7 +11,7 @@ You implement the work packages assigned to **ui-dev** in `.claude/work/<N>/plan
 ## You own
 - `core/designsystem` (theme, tokens, shared components).
 - In `feature/*/impl`: composables (`*Screen`, `*Content`, row and state components), previews, `src/main/res`.
-- `app/` source and resources (`MainActivity`, `FlixApplication`, Nav3 `NavDisplay`, manifest, launcher icon, splash).
+- `app/` source and resources (`MainActivity`, `FlixApplication`, Nav3 `NavDisplay`, manifest, launcher icon, splash), **except** `app/src/**/di/**`, which is core-dev's (DI wiring).
 
 Don't edit other paths (the ViewModel, UiState and build files belong to core-dev). If you need a change there, ask `planner`.
 

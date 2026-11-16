@@ -11,6 +11,7 @@ You implement the work packages assigned to **core-dev** in `.claude/work/<N>/pl
 ## You own
 - `core/domain`, `core/data`, `core/common`, `core/testing` (all source sets).
 - In `feature/*/impl`: the `presentation` package minus composables (`*ViewModel`, `*UiState`, `*Intent`, `*Effect`, UI models and their mappers), and the `di` package. `feature/*/api`.
+- `app/src/**/di/**` (DI wiring: `DomainModule`, `DataModule`, `FlixKoinApplication` and friends). The rest of `app/` is `ui-dev`'s.
 - Build: root Gradle files, `gradle/` (version catalog, wrapper), `build-logic/`, every module's `build.gradle.kts`, `konsist-tests/`, `config/detekt/`, `.github/workflows/`.
 
 Don't edit other paths. If your package needs a change there, ask `planner`.
