@@ -5,7 +5,7 @@ sealed interface DomainError {
     /** No connectivity or a timeout. */
     data object Network : DomainError
 
-    /** An HTTP 5xx or another unexpected status. */
+    /** Any non-2xx HTTP status (4xx/5xx). */
     data class Server(val code: Int) : DomainError
 
     /** Malformed JSON, an unknown time zone id or a missing mandatory field. */
