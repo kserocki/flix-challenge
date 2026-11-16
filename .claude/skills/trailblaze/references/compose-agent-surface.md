@@ -1,0 +1,388 @@
+# Rung 3 — Compose your own agent surface
+
+Once the user wants to author tests for *their* app — not just drive a
+generic device — Trailblaze's value comes from the agent seeing the
+app's vocabulary instead of only the framework's primitives. Custom
+typed tools (`login`, `addToCart`), named waypoints (`Inbox`,
+`CartReview`), and a curated toolset together form a **trailmap** — a
+target-aware capability bundle the agent loads when it drives that
+app.
+
+A trailmap isn't a separate runtime mode. It's a directory of YAML +
+TypeScript files the workspace declares, and the next time the agent
+runs against that target it sees the composed surface as first-class
+tools. The agent gets dramatically more capable on every task that
+uses the composition.
+
+Load this reference when the task is to author a typed scripted tool,
+define a waypoint, curate which tools the agent sees, write a
+`trailmap.yaml`, or debug "my custom tool isn't showing up in
+`toolbox`". Prerequisites in [`drive-device.md`](drive-device.md)
+(device + target routing keys, the `toolbox` command).
+
+## Contents
+
+- [What you compose](#what-you-compose)
+- [Directory layout](#directory-layout)
+- [Before you write a tool](#before-you-write-a-tool)
+- [Authoring the smallest useful tool](#authoring-the-smallest-useful-tool)
+- [Materializing the workspace](#materializing-the-workspace)
+- [When the tool doesn't appear in `toolbox`](#when-the-tool-doesnt-appear-in-toolbox)
+- [Inspecting your composed surface](#inspecting-your-composed-surface)
+- [Using your tool in a trail](#using-your-tool-in-a-trail)
+- [Editing a tool: find its blast radius first](#editing-a-tool-find-its-blast-radius-first)
+- [Distribution](#distribution)
+- [What's mature vs. still landing on this rung](#whats-mature-vs-still-landing-on-this-rung)
+
+## What you compose
+
+| Layer | What it is | Where it lives |
+|---|---|---|
+| **Typed scripted tool** | A TypeScript function the agent sees as a named tool, with typed inputs, a typed result, and an LLM-facing description. Replayable like any built-in. | `trailblaze-config/trailmaps/<id>/tools/<tool>.ts` |
+| **Waypoint** | A named, assertable location in the app, defined structurally (element identity, stable labels), never by content. Used as a checkpoint, target, or "am I on the Inbox?" predicate. | `trailblaze-config/trailmaps/<id>/waypoints/<id>.waypoint.yaml` |
+| **Toolset selection** | The curated list of which primitives + custom tools the agent actually sees per platform. Surfaces your `login` and hides the low-level taps when that's what the test needs. | `trailmap.yaml` → `target.platforms.<platform>.tool_sets` |
+
+## Directory layout
+
+```text
+<repo>/
+└── trailblaze-config/
+    ├── trailblaze.yaml                        # workspace anchor
+    └── trailmaps/
+        └── myapp/
+            ├── trailmap.yaml                  # the manifest
+            ├── tools/
+            │   └── myapp_login.ts             # typed scripted tool
+            └── waypoints/
+                └── myapp-home.waypoint.yaml
+```
+
+`trailblaze-config/` is the current layout. Older workspaces keep the same tree under
+`trails/config/` (the legacy layout, still read); if both exist, `trailblaze-config/` wins.
+
+Trailmaps under `<config dir>/trailmaps/<id>/` are discovered automatically; there is no
+`trailmaps:` list in `trailblaze.yaml`. The file only has to exist as the workspace anchor. To
+load a subset of the trailmaps on disk, name their ids under `targets:`:
+
+```yaml
+targets:
+  - myapp
+```
+
+## Before you write a tool
+
+Settle two questions first: does it need to be a registered tool, and does it need Kotlin?
+Usually the answers are no and no.
+
+- **Register a tool only when trails or many callers need it.** Every registered tool is listed
+  in every session's tool registry, and someone maintains it. Plumbing that one or two tools share
+  is an exported function in the trailmap's `tools/` directory, imported by those tools. Calling a
+  helper is a plain JavaScript call, so it costs nothing and adds nothing to the registry.
+- **Write it in TypeScript.** A scripted tool runs in-process in QuickJS. A call costs about
+  0.2 ms more than the same tool in Kotlin, while one device action takes hundreds of
+  milliseconds (devlog `2026-09-29-typescript-tools-cost-a-fifth-of-a-millisecond`). The tool
+  ships with its trailmap and needs no framework build.
+- **Reach the host through `exec` and HTTP through `fetch`.** Between them, they cover most of
+  what native tools used to be written for.
+- **Use Kotlin only for a primitive the sandbox lacks**, such as sensitive agent memory,
+  environment variables, binary HTTP bodies or sockets. Keep the Kotlin to that primitive and
+  write the rest in TypeScript on top of it.
+- **A Kotlin tool that only TypeScript calls, by name, should be ported.** Turn it into a
+  TypeScript helper and delete the Kotlin.
+
+```ts
+// trailblaze-config/trailmaps/myapp/tools/myapp_preferences.ts
+// A helper, not a tool: no trailblaze.tool(), no YAML descriptor, nothing registered.
+import type { ToolContext } from "@trailblaze/scripting";
+
+/** Reads one key from the app's preferences on the host. */
+export async function readMyAppPreference(ctx: ToolContext, key: string): Promise<string> {
+  return String(await ctx.tools.exec({ argv: ["myapp-prefs", "get", key] })).trim();
+}
+```
+
+The tool that needs the value imports `readMyAppPreference` and calls it directly. The
+Wikipedia and iOS Contacts examples share code this way (`wikipedia_shared.ts`,
+`contacts_ios_shared.ts`).
+
+## Authoring the smallest useful tool
+
+Declare inputs as a TypeScript interface and export the handler via
+`trailblaze.tool<I>([spec,] handler)`. The framework derives the JSON
+schema, the LLM description (from TSDoc), and the typed binding for
+sibling tools. The export name is the tool name, and the tool is
+registered automatically once the file sits in the trailmap's `tools/`
+directory.
+
+```ts
+// trailblaze-config/trailmaps/myapp/tools/myapp_login.ts
+import { trailblaze } from "@trailblaze/scripting";
+
+export interface LoginArgs {
+  /** Email to sign in with. */
+  email: string;
+  /** Password for that account. Passed via --secret at runtime. */
+  password: string;
+}
+
+/**
+ * Sign into the Android MyApp target with the supplied credentials. Use this whenever the
+ * task is to authenticate as a known user before exercising other flows.
+ */
+export const myapp_login = trailblaze.tool<LoginArgs>(
+  { supportedPlatforms: ["android"], sensitiveArgNames: ["password"] },
+  async (input, ctx) => {
+    await ctx.tools.tapOnElementBySelector({
+      nodeSelector: { androidAccessibility: { textRegex: "(?is).*Sign in.*" } },
+    });
+    await ctx.tools.inputText({ text: input.email });
+    await ctx.tools.inputText({ text: input.password });
+    await ctx.tools.tapOnElementBySelector({
+      nodeSelector: { androidAccessibility: { textRegex: "(?is).*Continue.*" } },
+    });
+    return `Signed in as ${input.email}.`;
+  },
+);
+```
+
+`sensitiveArgNames` masks those top-level argument values in the
+tool-execution log; the handler still receives the real value. A call made
+directly over MCP or `trailblaze tool` is still recorded unmasked in the MCP
+request log and the daemon log, and anything the handler writes to stderr is
+copied into the daemon log verbatim (Trailblaze's
+`docs/scripted-tools-typed-authoring.md`, "Keeping a credential out of the
+session log"). There is no sibling
+YAML, `inputSchema:`, or `tools:` list to write: the `.ts` file is the
+whole tool. The trailmap manifest needs no entry for it:
+
+```yaml
+id: myapp
+dependencies:
+  - trailblaze
+target:
+  display_name: My App
+  platforms:
+    android:
+      app_ids: [com.example.myapp]
+```
+
+> Legacy: older trailmaps pair each `.ts` with a descriptor YAML
+> (`script:`, `name:`, `description:`, `inputSchema:`) around an `export
+> async function`. It still works, and `script:` resolves relative to the
+> descriptor's own directory. New tools don't need it. See the
+> [Scripted Tools](https://block.github.io/trailblaze/scripted_tools/)
+> guide for the contrast and migration notes.
+
+## Materializing the workspace
+
+After authoring or editing a trailmap, run `check` once. It scaffolds
+the workspace's SDK (`@trailblaze/scripting` + the per-trailmap
+generated typed bindings), type-checks every `.ts` source against it,
+and runs any `*.test.ts` unit tests via `bun test`:
+
+```bash
+trailblaze check                # auto-detects workspace from cwd
+trailblaze check --all          # type-check every trailmap
+trailblaze check --show-typed-tools   # diagnostic: list discovered typed tools + schemas
+```
+
+`check` is the right command to point the user at when they hit
+"my tool isn't showing up" — its `--show-typed-tools` output names
+every typed tool the analyzer discovered, with a one-line schema
+summary, so a missing-from-toolbox bug becomes a missing-from-check
+finding.
+
+**When `check` fails before it can report anything**, the message in
+the structured envelope usually names the cause. The three common ones:
+
+- *`bun` not on PATH* - the Homebrew install brings it in; with
+  `install.sh` or a source build, put `bun` on your `PATH`
+  ([bun.sh](https://bun.sh)). `esbuild` is optional (`brew install esbuild`);
+  `check` doesn't need it, but `usages --changed-since` does. You don't
+  need `bun install` or a `node_modules/`: the SDK and analyzer ship inside
+  the CLI.
+- *`@trailblaze/scripting` import won't resolve* — the workspace SDK
+  wasn't materialized; rerun `trailblaze check` so the SDK files land
+  under `<workspace>/.trailblaze/sdk/dist/`.
+- *`*.test.ts` unit test failure* — `check` runs your tests via
+  `bun test`; a failing test blocks the type-check pass. Fix the test
+  (or temporarily mark it `.skip` if it's a known unrelated breakage)
+  and re-run.
+
+## When the tool doesn't appear in `toolbox`
+
+After `check` reports clean, if the tool still isn't visible to the
+agent, walk the four checkpoints in order:
+
+1. **Run `trailblaze check --show-typed-tools`** — if the tool is in
+   that output, it's analyzer-visible; the bug is downstream (steps 2–4).
+   If it's not, the analyzer didn't see your `.ts` source; jump to 3.
+2. **Confirm the trailmap doesn't exclude the tool.** Every scripted
+   tool under `<trailmap>/tools/` is on the target; a
+   `target.platforms.<platform>.excluded_tools:` entry removes it on that platform.
+3. **Confirm the `.ts` file is where the loader looks.** It must sit
+   under `<trailmap>/tools/` and export the tool as a
+   `trailblaze.tool(...)` binding. (For a legacy descriptor YAML, its
+   `script:` path resolves relative to the descriptor's own directory,
+   not the working directory.)
+4. **Confirm the trailmap is loaded.** Trailmaps under
+   `<config dir>/trailmaps/<id>/trailmap.yaml` are discovered
+   automatically. If `trailblaze.yaml` sets `targets:`, only the ids
+   listed there load, so add this trailmap's id.
+
+## Inspecting your composed surface
+
+Use the same discovery commands from rung 1, now scoped to your
+target:
+
+```bash
+trailblaze toolbox --target myapp --device android        # full toolset for myapp on Android
+trailblaze toolbox --target myapp --name myapp_login      # detail for one tool
+trailblaze waypoint list                                  # all waypoints from active trailmaps
+```
+
+The agent's next session against `--target myapp` sees the composed
+surface — your `myapp_login` lands next to the platform primitives.
+
+## Using your tool in a trail
+
+In a `.trail.yaml`, custom tools are called the same way as
+primitives — by name, with typed arguments:
+
+```yaml
+config:
+  id: myapp/smoke
+  target: myapp
+
+trail:
+  - step: Sign in as the test user
+    recording:
+      android:
+        - myapp_login:
+            email: "{{TEST_EMAIL}}"
+            password: "{{TEST_PASSWORD}}"
+```
+
+To verify the resulting screen state, follow the custom-tool step
+with a built-in assertion against the live view hierarchy — e.g.
+`assertVisible` (driven by `ref=` from a `snapshot`; refs are never
+recorded, the trail saves an `assertVisibleBySelector` with a selector
+computed from the live tree), `assertNotVisibleWithText` to check that
+a known-blocking element is gone, or `assertWaypoint` to assert the
+screen is at a named waypoint (host-only). Run
+`trailblaze toolbox --target myapp --device <platform>` to see the
+actual assertion verbs available on your platform.
+
+Pass values at runtime with `--memory` / `--secret`; the
+`{{TEST_EMAIL}}` and `{{TEST_PASSWORD}}` tokens above resolve from them:
+
+```bash
+trailblaze run trails/myapp/smoke/trail.yaml -d android \
+  --memory TEST_EMAIL=test@example.com \
+  --secret TEST_PASSWORD=hunter2
+```
+
+**Debugging an authored tool at runtime.** When a custom tool
+misbehaves during `run` (throws, returns the wrong message, hangs),
+the session log is the primary inspection surface — generate the HTML
+report with `trailblaze report --id <session-id>` (the session ID is
+printed when `run` starts; `trailblaze session list` also surfaces
+it). The report shows the exact tool invocation, the resolved
+arguments, the structured error envelope, and the captured screen
+state at the point of failure. Diagnose authoring bugs there before
+re-editing the `.ts`. See [`save-and-replay.md`](save-and-replay.md)
+for more on the report surface.
+
+## Editing a tool: find its blast radius first
+
+Before editing or deleting a tool, know which trails the change can
+reach. There are two tiers, and they have different certainty.
+
+**Tier 1 — trails that invoke the tool directly (certain).** This is
+a parsed-model fact, and the framework answers it:
+
+```bash
+trailblaze usages myapp_login --json      # every trail whose recordings invoke it,
+                                          # with the device classifiers per usage
+trailblaze usages --changed-since origin/main --json
+                                          # derive the tool set from your diff instead: every
+                                          # added / removed / modified scripted tool, plus the
+                                          # tier-2 callers below
+```
+
+Each usage reports *which device classifiers'* recordings carry the
+invocation, so an `android:`-only usage never implicates a trail's
+iOS legs. `--changed-since` hashes each tool's source together with
+its resolved import closure, so editing a shared helper module flags
+every tool that imports it. A non-empty `warnings` array means the
+report may be incomplete — treat "zero usages" as unproven, not as
+license to delete.
+
+**Tier 2 — tools that compose your tool (inferred).** One tool can
+dispatch another from its implementation. `ctx.tools.other(...)` is a
+runtime call through the host, not an import, so the callee never
+enters the caller's import closure and tier 1's hashes cannot see it
+— a tool that is mostly a delegation to a changed tool hashes as
+untouched.
+
+`--changed-since` infers these edges for you and reports them under
+`changedSince.impactedViaCallers`, transitively: if your tool's caller
+has a caller, both are listed. Those tools are queried for trails like
+any other, so the `tools` array already covers them.
+
+```bash
+trailblaze usages --changed-since origin/main --json \
+  | jq '.changedSince.impactedViaCallers'
+```
+
+It is kept out of `added` / `removed` / `modified` because those are
+facts about bytes and this is an inference from reading each tool's
+bundled output for names. What that means in practice:
+
+- It reads the BUNDLE, so a dispatch buried in a helper several
+  modules deep, or reached through a renamed receiver, is still found.
+  String dispatch — `client.callTool("myapp_login")` — is found too.
+- It over-reports by design: a redundant replay is cheap, a missed
+  edge ships with no coverage.
+- It cannot see a callee name COMPUTED at runtime
+  (`callTool(prefix + suffix)`). No static analysis can; an IDE's
+  "find usages" misses it for the same reason.
+- Tools the in-process bundler cannot build (`runtime: subprocess`)
+  are named in `warnings` — they still count as a callee, but no edge
+  points out of them.
+
+The two tiers compose: tier 2 gives you the caller set, tier 1 gives
+you each caller's trails. The union is the blast radius; replaying
+those trails before the change lands is what proves it safe. When you
+have named a tool explicitly rather than using `--changed-since`,
+tier 2 is still yours to establish — grep the trailmap's `tools/`
+directory for `ctx.tools.myapp_login(`, and for Kotlin-backed tools
+`invokeFrameworkTool("myapp_login")`.
+
+## Distribution
+
+Today, a trailmap is a directory in the user's repo. Cross-team
+sharing happens by copying the directory or referencing it as a
+checked-in git path. **npm distribution for community-published
+trailmaps is in active development** — when it lands, installing a
+trailmap for someone else's app will look like `npm install
+@org/myapp-trailmap`.
+
+## What's mature vs. still landing on this rung
+
+Be honest with the user about which corners are still being shaped:
+
+- **Mature:** the typed scripted-tool authoring surface
+  (`trailblaze.tool<I>([spec,] handler)`), per-trailmap typed bindings via
+  `trailblaze check`, structural waypoint definitions plus the
+  `trailblaze waypoint locate/validate` discovery commands, the
+  host-only `assertWaypoint` step-level check, and
+  trailmap (`trailmap.yaml`) composition via `dependencies:`.
+- **Active prototype:** trail-as-tool (expose a saved trail as a tool
+  callable from other trails), the waypoint navigation graph
+  (`trailblaze waypoint graph`), and npm-based trailmap distribution.
+
+When the user hits an edge case in one of the "active prototype"
+areas, point them at the [devlog index](https://block.github.io/trailblaze/devlog/)
+rather than guessing — those features evolve faster than this skill
+can track.

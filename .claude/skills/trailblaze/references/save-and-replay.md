@@ -1,0 +1,283 @@
+# Rung 2 — Save and replay
+
+Once you've driven a device (see [`drive-device.md`](drive-device.md)),
+Trailblaze has been recording each step into a session. You can save the
+session as a `.trail.yaml` file for later deterministic replay, inspect
+it in the Trace Viewer, or commit it to the user's repo as a CI test.
+Same artifact, three uses — and **no LLM at replay time by default**.
+The two exceptions are opt-in: `--self-heal` puts the LLM back in the
+loop to patch a failing step against the live screen, and a trail step
+that ships with only a natural-language description (no `recording:`
+block) falls back to LLM execution. Default deterministic; opt-in
+agentic.
+
+Load this reference when the task is to save a trail, replay one, run
+a suite, inspect a session (HTML report or desktop trace viewer), or
+look up the results of a past CI run.
+
+## Product user-flow acceptance
+
+Product user-flow trails operate the app or surface as a user and assert
+user-visible behavior. Do not append independent API, database, or backend
+saved-setting reads as extra UI acceptance, or replace the interaction under
+test with hidden writes. When persistence is explicitly required, prove it
+by returning to the relevant screen or relaunching as the requirement calls
+for—not by inspecting storage. Do not add persistence checks otherwise.
+
+Authorized deterministic setup belongs in the trailhead or a separate setup
+workflow; it is not proof of the interaction under test. Failure diagnostics
+and explicitly requested non-UI, backend, or integration checks are separate
+workflows with their own claims and evidence. They do not substitute for
+visible UI acceptance, and backend success cannot turn a failed UI assertion
+into a pass. Preserve existing explicitly required test contracts: do not
+delete or weaken an assertion, or silently change a requested test's meaning,
+to apply this default. Surface a concrete conflict separately.
+
+## Contents
+
+- [Product user-flow acceptance](#product-user-flow-acceptance)
+- [Sessions are auto-created on first device action](#sessions-are-auto-created-on-first-device-action)
+- [Saving a session as a `.trail.yaml`](#saving-a-session-as-a-trailyaml)
+- [Replaying a trail](#replaying-a-trail)
+- [Remember a value in one step, recall it in a later step](#remember-a-value-in-one-step-recall-it-in-a-later-step)
+- [Inspecting a session — generate an HTML report](#inspecting-a-session--generate-an-html-report)
+- [Inspecting a session in the desktop Trace Viewer](#inspecting-a-session-in-the-desktop-trace-viewer)
+- [Looking up past results](#looking-up-past-results)
+
+## Sessions are auto-created on first device action
+
+You don't need to start a session explicitly. The first `snapshot` or
+`tool` call against a given `(device, target)` pair creates a
+session; subsequent calls on that pair reuse it. Switching `--target`
+on a device that already has a saved session starts a new one and
+prints `Target app changed (A -> B) -- creating new session.`
+
+If you want explicit control (e.g., to force a clean session start):
+
+```bash
+trailblaze session start -d <device>   # explicit start with video + logs capture
+trailblaze session stop -d <device>    # finalize captures, release the device
+```
+
+The full `session` surface:
+
+```bash
+trailblaze session list                       # recent sessions
+trailblaze session info --id <session-id>     # detail on one session
+trailblaze session artifacts --id <id>        # what got captured (screenshots, video, logs)
+trailblaze session recording --id <id>        # the recording YAML for a session
+trailblaze session delete --id <id>           # delete logs + artifacts
+```
+
+(`info`, `artifacts`, and `recording` default to the current session
+when `--id` is omitted. `delete` always requires an ID. All four
+accept the ID as `--id <id>` or positionally (`session info <id>`)
+and accept an ID prefix.)
+
+## Saving a session as a `.trail.yaml`
+
+When the session has progressed to a point worth keeping (a flow ran
+successfully, an interesting state is captured), save it:
+
+```bash
+trailblaze session save                       # save the current session
+trailblaze session save --id <session-id>     # save a specific session (id prefix OK)
+trailblaze session save -t "<title>"          # save with a title
+```
+
+`session save` operates on the **current session by default**; pass
+`-d <device>` to save that device's session (required for a
+multi-device `session start --bind` session). It writes the recorded
+steps to a `.trail.yaml` file. **The session stays active** — you
+can keep driving the device and `session save` again later to capture
+the extended flow. Use `session stop` when you're actually done with
+the device. A one-shot alternative is `trailblaze session stop --save -d <device>`
+which saves and ends in one step.
+
+The trail YAML has two halves per step:
+- **Natural-language step** — the `-s "<step>"` you passed at
+  record time. The prose source of truth.
+- **Recording** — the resolved selector, the captured screen state,
+  the tool that ran and its args. Frozen at record time.
+
+The natural-language steps describe *what* the test does; the
+recordings describe *how* it runs on this specific platform.
+
+## Replaying a trail
+
+```bash
+trailblaze run <trail.yaml> -d <device>
+```
+
+`run` replays the trail deterministically. Frozen selectors mean no
+LLM at replay time — refs that were recorded resolve back to the
+same elements on the same screen. Fast, predictable, zero token
+cost.
+
+`run` accepts files, shell globs, or directories. Directories expand
+recursively to every named trail (`<scenario>.trail.yaml`), plus one
+pick per legacy trail (recording preferred over NL when both are
+present):
+
+```bash
+trailblaze run trails/login.trail.yaml -d <device>
+trailblaze run trails/ -d <device>                            # every trail under trails/
+trailblaze run 'trails/**/login.trail.yaml' -d <device>       # glob pattern
+```
+
+Useful `run` flags:
+
+- **`--self-heal`** — when a recorded step doesn't match the live
+  screen anymore (UI drift), Trailblaze's built-in agent patches the
+  failing step against the live screen and updates the recording on
+  success. Overrides the persisted `trailblaze config self-heal`
+  setting for this run (`--self-heal=false` forces it off); omit the
+  flag to inherit that setting, which is off unless you turned it on,
+  so flakes don't get silently masked.
+- **`--memory KEY=VAL`** — seed runtime values into the trail's
+  memory (e.g., usernames, search terms).
+- **`--secret KEY=VAL`** — seed sensitive values (e.g., passwords)
+  that won't be logged.
+- **`--tags <tag>[,<tag>,…]`** — only run trails matching the given
+  tag filter.
+
+Trails declare their own metadata too, under `config:`. A `tags:`
+list lets you partition the suite. A `skip:` map keyed by device
+classifier (`skip: { android: "reason" }`) reports the trail as
+skipped at runtime and exits 0 for that file's slot. Blank reasons
+are ignored. To unskip a trail, remove its `skip:` entry.
+
+A crash the device log shows does not fail the run on its own: it is
+indexed as the session's `crash` stream and marked on the report's
+timeline, and the run's verdict comes from its steps.
+
+**Memory/secret resolution contract.** A step recalls a seeded value
+as `{{KEY}}` (`${KEY}` and `{{memory.KEY}}` mean the same). A token
+whose key was never supplied does not fail the step: it stays in the
+text as a literal (`{{KEY}}` is typed or asserted as written) and a
+warning is logged once per token. A missing `--memory` / `--secret`
+therefore shows up as a wrong value on screen, so fix the invocation.
+Later `--memory K=V` overrides earlier occurrences of the same key
+(last-write-wins); extra keys not referenced by any step are silently
+ignored. For typed per-run parameters, the trail declares them under
+`config.args:`, you pass `--arg KEY=VAL`, and steps use `{{args.name}}`;
+a missing required arg fails before the run starts. Args are logged in
+cleartext, so keep sensitive values in `--secret`.
+
+**When `run` fails before reaching a step.** File-not-found / no-glob-match
+exits non-zero with the resolved path. Malformed YAML reports parse
+errors with the offending line. If the bound device disconnects or
+becomes unavailable mid-run, `run` halts at the failing step and the
+partial session is inspectable via `trailblaze session info --id <id>`
+and `trailblaze report --id <id>` — the recording up to the failure
+point is intact.
+
+## Remember a value in one step, recall it in a later step
+
+A trail often needs a value produced in one step to be used in a later
+step — a name you typed into a form and then assert on, a number read
+off the screen and compared, an id you search for after creating it.
+This is memory. **Recall** is always LLM-free — a stored variable is
+substituted at the dispatch boundary before the tool runs. What differs
+between the sources is how the value gets **stored** in the first place:
+
+- **`--memory KEY=VAL` / `--secret KEY=VAL`** seed a value from
+  *outside* the trail (see above) — usernames, search terms, passwords
+  supplied per run. No LLM.
+- **`inputTextRandom`** — **generate a unique-per-run value** (a
+  prefix followed by random digits, optionally a suffix such as an
+  `@example.com` email with `hex=true`), type it into the focused
+  field, and — when you pass `variable:` — remember it. No LLM, so it
+  replays deterministically and produces a fresh value each run: a
+  trail on a **persistent account/device never collides with a
+  leftover** from a previous run the way a hard-coded literal would.
+- **`rememberText` / `rememberNumber`** — read a value already on
+  screen, located by a natural-language prompt. Resolving that prompt
+  goes through the LLM-backed element locator, so these **do call the
+  LLM at replay** even though what they store is real screen text.
+  Don't reach for them in an LLM-disabled run.
+- **`rememberTextBySelector` / `rememberNumberBySelector`** - read the
+  same on-screen value, located by a `nodeSelector` (the selector
+  grammar `assertVisibleBySelector` uses) instead of a prompt, and
+  store it under `variable:`. **No LLM**: the capture to use in an
+  LLM-free run. The number form keeps the first number in the text, so
+  `$42.50` stores as `42.50`.
+- **`rememberWithAi`** — let the agent invent/pick a value. Also
+  **calls the LLM at replay**.
+
+So for a trail that must replay with no LLM, seed the value with
+`--memory`, generate it with `inputTextRandom`, or capture it with a
+`...BySelector` tool.
+
+Recall a stored variable in any later step by interpolating it as
+`{{variable}}` or `${variable}` — in an `inputText`, a search field, an
+`assertVisibleBySelector`, etc. The token is substituted at the dispatch
+boundary before the step's tool executes. Tokens follow Mustache's rules:
+spaces inside the braces are ignored (`{{ variable }}`), `{{{variable}}}`
+works too, a `$` right before a token stays a literal `$` (`${{amount}}`
+gives `$5`), and a substituted value is never scanned for tokens again.
+
+## Inspecting a session — generate an HTML report
+
+The most reliable way to inspect a session in detail is the
+self-contained HTML report:
+
+```bash
+trailblaze report --id <session-id>     # render a specific session's report
+trailblaze report --current             # render the current session
+```
+
+`report` produces an HTML file (the primary artifact, gates the exit
+code), plus optionally MP4 / GIF / WebP exports for video playback.
+The HTML is self-contained and openable in any browser — useful for
+attaching to bug reports, sharing with teammates, or surfacing inline
+in CI builds.
+
+The report shows step-by-step playback, the view hierarchy at each
+step, screenshots, video, recorded tool calls, and the LLM transcript
+(when an LLM was in the loop).
+
+Use this when:
+- A `run` failed and you want to see the recorded vs live state
+- The user asks "why did that test break?"
+- You want to share what happened with a teammate
+
+## Inspecting a session in the desktop Trace Viewer
+
+For interactive inspection (multiple sessions side-by-side, frame
+scrubbing, view-hierarchy editing), open Trailblaze App:
+
+```bash
+trailblaze app                  # open Trailblaze App (boots the daemon if needed)
+trailblaze app --headless       # daemon-only, no window
+trailblaze app --status         # is the daemon running?
+trailblaze app --stop           # stop the running daemon
+```
+
+`trailblaze app` starts the daemon, which drives devices and serves session
+data; every CLI call can boot it on demand too. Use `--headless` on a machine
+with no display (CI agent, remote shell) when you want subsequent CLI calls to
+reuse the daemon.
+
+The HTML report is still the right artifact for sharing or for
+attaching to a bug report — it's self-contained and portable. The
+Trailblaze App is the right surface for live local inspection.
+
+If a daemon is already running on the bound port, `trailblaze app`
+reuses it (no second daemon spawns). If startup fails — port already
+held by an unrelated process, no display available on the host, missing
+JVM dependency — the error surfaces via the standard structured envelope
+(`reason:` + `hint:`). Use `trailblaze app --status` to verify the daemon
+state and `--stop` to free the port before retrying.
+
+## Looking up past results
+
+```bash
+trailblaze results show C<case-id> --device <profile>
+trailblaze results show C<case-id> --all-devices    # across the device matrix
+```
+
+Queries the persisted test-result index. **Case IDs need the `C`
+prefix** (e.g. `C12345`), and `--device <profile>` or `--all-devices`
+is required. Useful when investigating "when was the last successful
+run of test X, and where are its artifacts?"

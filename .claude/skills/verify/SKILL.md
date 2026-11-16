@@ -22,6 +22,9 @@ Run from the repo root (or the worktree root), always with a Bash `timeout` (at 
 ./gradlew :core:domain:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test   # macOS only
 ```
 
+## UI changes (before review)
+With the emulator running and the debug app installed, replay every trail in `trails/` (`trailblaze run trails/<scenario>`). A red trail is either a regression (fix the code) or an intended UI change (`qa` re-records it). Never edit the recorded actions by hand to make a trail pass.
+
 ## Rules
 - Green means green: **no baselines, no `@Suppress`** without a one-line reason next to it that the reviewer accepts, and no `@Ignore`d tests.
 - A failure you don't understand → ask `consultant`. Don't change the rule config to get green.
