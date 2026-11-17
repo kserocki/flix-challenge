@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cold-start window background, dark mode. Must match FlixDarkColorScheme.surface
+         in theme/Color.kt. The launcher colours don't vary by theme, so they aren't repeated here. -->
+    <color name="flix_window_background">#FF121411</color>
+</resources>

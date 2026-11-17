@@ -40,6 +40,7 @@ Everything else is ignored (`ignoreUnknownKeys = true`). DTOs declare only these
 - `scheduled_timestamp` has no milliseconds, while the request format has them. The parser must accept both.
 - `platform` is `null` at Berlin ZOB.
 - The response returned rides already in scheduled order. We still sort (TT-5), because the API doesn't guarantee it.
+- (2026-11-17) Two **different** rides can look identical on the board: same `line.code`, `direction` and `scheduled_timestamp`, but different `id` and `trip_number`. Seen: `CBS221` to Bucharest at 16:00Z, partner brand `COMATI`. They're real rides, so both are shown. TT-6 dedups by `id` only, never by visible content.
 
 ## Errors to expect
 | Situation | Mapped to |

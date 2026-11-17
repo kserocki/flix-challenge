@@ -1,0 +1,55 @@
+config:
+  devices:
+    android:
+      driver: ANDROID_ONDEVICE_ACCESSIBILITY
+  title: timetable-offline-error
+
+trail:
+  - step: "Launch the app while the device is offline"
+    recording:
+      android:
+        - openApp:
+            appId: com.kserocki.flix
+
+  - step: "Confirm the full-screen error title shows No connection"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: No connection
+
+  - step: "Confirm the error body explains the connection problem"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: \QCheck your internet connection and try again.\E
+
+  - step: "Confirm a Retry button is shown"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Retry
+
+  - step: "Tap Retry while still offline"
+    recording:
+      android:
+        - tapOnElementBySelector:
+            nodeSelector:
+              androidAccessibility:
+                classNameRegex: android.view.View
+              childOf:
+                androidAccessibility:
+                  classNameRegex: android.widget.ScrollView
+
+  - step: "Confirm Retry while offline shows the same No connection error"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: No connection

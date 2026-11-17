@@ -14,18 +14,18 @@ The behaviour the app must have. Every rule has an id, so tests and reviews can 
 
 ## Time zones
 - **TT-7** Departure time is converted with `station.timezone` from the response, **never** with the device zone. A device in `America/New_York` shows Berlin departures in Berlin time.
-- **TT-8** The station header shows the station name and the zone's short label for the first departure's instant (or for `now` if the list is empty), for example `CET`/`CEST`. If no short label can be derived, show the IANA id (`Europe/Berlin`).
+- **TT-8** The station header shows the station name and the zone the times are in: the IANA id plus the UTC offset at the first departure's instant (or at `now` if the list is empty), for example `Europe/Berlin (UTC+1)`, or `Europe/Berlin (UTC+2)` in summer. A fixed-offset zone shows only the offset (`UTC`, `UTC+5:30`). Platform abbreviations (`CET`/`CEST`) aren't used: Android's locale data gives `GMT+01:00` for them, so they'd differ between platforms and tests.
 - **TT-9** If the time zone is missing, blank or can't be resolved by kotlinx-datetime, the response counts as invalid data (`DomainError.InvalidData`). Resolvable non-region ids (`UTC`, `+01:00`) are accepted, because they still give correct times. We never fall back to UTC or to the device zone silently, because showing a wrong time is worse than showing an error.
 
 ## Days
-- **TT-10** When the window crosses midnight **in the station zone**, departures are grouped under day headers (`Today`, `Tomorrow`). If all departures fall on the same station-local day as `now`, no header is shown.
+- **TT-10** When the window crosses midnight **in the station zone**, departures are grouped under day headers (`Today`, `Tomorrow`, relative to the station-local date of `now`). If all departures fall on the same station-local day as `now`, no header is shown. A departure on any other day (not expected within the window) gets a header with its date in the device's medium date format.
 
 ## States
 - **TT-11** First load shows a full-screen loading indicator.
-- **TT-12** Zero departures in the window shows an empty state with the station name ("No departures in the next 2 hours") and a retry action.
+- **TT-12** Zero departures in the window shows the station header and an empty state ("No departures in the next 2 hours") with a **Refresh** action that behaves like pull-to-refresh.
 - **TT-13** An error on first load shows a full-screen error with a message that matches the error type (no connection / server problem / unexpected data) and a **Retry** button.
-- **TT-14** Pull-to-refresh reloads with a new window (TT-1) and keeps the current list visible while it loads. If a refresh fails, the old list stays and a snackbar shows the error. The list is never replaced by a full-screen error.
-- **TT-15** Rotation and process recreation don't trigger a new network call if data is already loaded (the state lives in the ViewModel).
+- **TT-14** Pull-to-refresh reloads with a new window (TT-1) and keeps the current list visible while it loads. If a refresh fails, the old list stays and a long snackbar shows the error with a **Retry** action. The list is never replaced by a full-screen error. Screen-reader users get a "Refresh departures" accessibility action, because they can't pull to refresh.
+- **TT-15** Activity recreation (rotation, theme, font or locale change) doesn't trigger a new network call if data is already loaded (the state lives in the ViewModel). After the process is killed, the screen loads again with a fresh window, because restoring a saved list would show stale departures.
 
 ## Data tolerance
 - **TT-16** A single ride that can't be shown is **skipped**, not fatal, and the rest of the list still shows. A ride can't be shown when it has no `line` or `status` object, when `id`, `line.code` or `line.direction` is missing or blank, or when `status.scheduled_timestamp` is missing or unparseable. Skipped rides are logged in debug builds.

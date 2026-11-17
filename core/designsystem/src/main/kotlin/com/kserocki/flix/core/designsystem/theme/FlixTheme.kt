@@ -3,45 +3,41 @@ package com.kserocki.flix.core.designsystem.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.unit.dp
 
-private val LightColorScheme = lightColorScheme()
-private val DarkColorScheme = darkColorScheme()
-
-/**
- * The app's Material 3 theme: the baseline light/dark colour schemes, no dynamic colour and no
- * brand colours yet (those come with the timetable screen).
- */
+/** The app's Material 3 theme: the Flix brand colour schemes, no dynamic colour. */
 @Composable
 fun FlixTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+        colorScheme = if (darkTheme) FlixDarkColorScheme else FlixLightColorScheme,
         content = content,
     )
 }
 
 @PreviewLightDark
 @Composable
-private fun FlixThemePreview() {
+private fun FlixThemeTokenShowcasePreview() {
     FlixTheme {
         Surface {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(FlixSpacing.Medium)) {
                 Text(text = "Flix Timetable", style = MaterialTheme.typography.titleLarge)
-                Button(onClick = {}) {
-                    Text(text = "Sample action")
-                }
+                Text(
+                    text = "Departs 16:00",
+                    style = MaterialTheme.typography.titleMedium.withTabularFigures(),
+                )
+                Text(
+                    text = "N160 to Trieste",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

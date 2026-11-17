@@ -1,0 +1,40 @@
+config:
+  devices:
+    android:
+      driver: ANDROID_ONDEVICE_ACCESSIBILITY
+  title: timetable-foreign-device-zone
+
+trail:
+  - step: "Launch the app while the device time zone is set to America/New_York"
+    recording:
+      android:
+        - openApp:
+            appId: com.kserocki.flix
+
+  - step: "Confirm the top bar title shows Departures"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Departures
+
+  - step: "Confirm the station header shows Berlin central bus station"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Berlin central bus station
+
+  - step: "Confirm the zone label still shows Europe/Berlin not the device zone"
+    recording:
+      android:
+        - scrollUntilTextIsVisible:
+            textRegex: Times in Europe/Berlin \(UTC\+[12]\)
+
+  - step: "Confirm a departure row has the direction, line code and a station-zone departure time"
+    recording:
+      android:
+        - scrollUntilTextIsVisible:
+            textRegex: Line .+ to .+, departs \d{2}:\d{2}

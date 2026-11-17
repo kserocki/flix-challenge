@@ -1,0 +1,38 @@
+config:
+  devices:
+    android:
+      driver: ANDROID_ONDEVICE_ACCESSIBILITY
+  title: timetable-pull-to-refresh
+
+trail:
+  - step: "Bring the Flix Timetable app to the front"
+    recording:
+      android:
+        - openApp:
+            appId: com.kserocki.flix
+
+  - step: "Pull to refresh the departures list"
+    recording:
+      android:
+        - swipe:
+            swipeOnElementText: Berlin central bus station
+
+  - step: "Pull to refresh the departures list a second time"
+    recording:
+      android:
+        - swipe:
+            swipeOnElementText: Berlin central bus station
+
+  - step: "Confirm the station header still shows after refresh completes"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Berlin central bus station
+
+  - step: "Confirm a departure row is visible after refresh"
+    recording:
+      android:
+        - scrollUntilTextIsVisible:
+            textRegex: Line .+ to .+, departs \d{2}:\d{2}

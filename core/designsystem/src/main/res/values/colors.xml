@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cold-start window background, light mode. Must match FlixLightColorScheme.surface
+         in theme/Color.kt, so the window never flashes a different colour than the first frame. -->
+    <color name="flix_window_background">#FFF7FBF1</color>
+
+    <!-- Adaptive launcher icon: a bus glyph on the brand green, theme-invariant. Must match
+         FlixColorTokens.PrimaryContainerLight / OnPrimaryContainerLight in theme/Color.kt. -->
+    <color name="flix_launcher_background">#FF73D700</color>
+    <color name="flix_launcher_foreground">#FF132300</color>
+</resources>

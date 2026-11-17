@@ -26,11 +26,11 @@ Clean Architecture in three layers, with dependencies pointing inwards to the do
 |---|---|---|---|
 | `app` | Android application | everything below | `FlixApplication` (Koin start), `MainActivity`, Nav3 `NavDisplay`, entry registration, `DomainModule` (use-case providers), `LogcatDataLogger`, the `Clock` binding |
 | `feature:timetable:api` | Android library | – | `TimetableNavKey` |
-| `feature:timetable:impl` | Android library | `feature:timetable:api`, `core:domain`, `core:common`, `core:designsystem` | `TimetableViewModel`, `TimetableUiState/Intent`, `TimetableScreen/Content`, UI mappers (domain → UI model) |
+| `feature:timetable:impl` | Android library | `feature:timetable:api`, `core:domain`, `core:common`, `core:designsystem` | `TimetableViewModel`, `TimetableUiState/Intent/Effect`, UI mappers (domain → UI model), `TimetableModule` (Koin), `TimetableScreen/Content` |
 | `core:domain` | KMP | `core:common` | `Station`, `Departure`, `StationTimetable`, `DepartureRepository`, `GetStationTimetableUseCase`, `DomainError` |
 | `core:data` | KMP | `core:domain`, `core:common` | `FlixApiConfig`, `FlixApiClient`, `DeparturesResponseDto`, `toDomain()` mappers, `NetworkDepartureRepository`, `DataLogger` (bound by `app`), Ktor engine per platform (OkHttp / Darwin) |
 | `core:common` | KMP | – | `Result<T, E>`, `suspendRunCatching` |
-| `core:designsystem` | Android library | – | `FlixTheme`, colour/spacing/type tokens, shared components (error/empty states) |
+| `core:designsystem` | Android library | – | `FlixTheme`, colour/spacing/type tokens, `FlixTopAppBar`, shared loading and message-state components |
 | `core:testing` | KMP | `core:domain`, `core:common` | `FakeDepartureRepository`, `TestClock`, fixture builders |
 | `konsist-tests` | JVM | – | Architecture rules over all sources |
 | `build-logic` | included build | – | Convention plugins: `flix.kmp.library`, `flix.android.library`, `flix.android.feature`, `flix.android.application`, `flix.compose`, `flix.koin`, `flix.quality` |
@@ -96,6 +96,7 @@ Navigation 3 (ADR-0006). `feature:*:api` exposes a `@Serializable` `NavKey`. `fe
 - **Detekt** with the Compose rules (`io.nlopez.compose.rules`), basic config (ADR-0007).
 - **Konsist**: the rules from `AGENTS.md` §3 (ADR-0005).
 - **Unit tests**: `commonTest` for KMP modules, JVM tests for Android modules.
+- **Compose semantics tests** for `feature:*:impl` run on the JVM with Robolectric + `ui-test-junit4` (set up by `flix.android.feature`). Robolectric is pinned to `sdk=35` in each module's `src/test/resources/robolectric.properties`, because SDK 36+ sandboxes need Java 21 and CI/local use JDK 17. Raise it together with the JDK.
 - **CI**: GitHub Actions (ADR-0008).
 
 ## 9. Versions

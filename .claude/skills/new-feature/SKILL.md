@@ -7,8 +7,9 @@ description: Playbook for adding a screen or a new feature module (feature:<name
 
 ## 1. Modules
 - `feature/<name>/api/build.gradle.kts`: `plugins { id("flix.android.library") }` + `kotlinx-serialization` + `navigation3-runtime`.
-- `feature/<name>/impl/build.gradle.kts`: `plugins { id("flix.android.feature") }`. The convention adds Compose, Koin, lifecycle, designsystem, `core:domain`, `core:common` and test deps. Add `implementation(projects.feature.<name>.api)`.
+- `feature/<name>/impl/build.gradle.kts`: `plugins { id("flix.android.feature") }`. The convention adds Compose, Koin, lifecycle, designsystem, `core:domain`, `core:common`, Robolectric and test deps. Add `implementation(projects.feature.<name>.api)`.
 - Add both to `settings.gradle.kts`, and `impl` to `app/build.gradle.kts`.
+- If the module has a Compose semantics test (JVM, Robolectric), add `feature/<name>/impl/src/test/resources/robolectric.properties` with `sdk=35` — SDK 36+ needs Java 21, and CI/local use JDK 17 (see `docs/ARCHITECTURE.md` §8).
 
 ## 2. api
 ```kotlin

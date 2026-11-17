@@ -1,0 +1,40 @@
+config:
+  devices:
+    android:
+      driver: ANDROID_ONDEVICE_ACCESSIBILITY
+  title: timetable-content
+
+trail:
+  - step: "Launch the Flix Timetable app"
+    recording:
+      android:
+        - openApp:
+            appId: com.kserocki.flix
+
+  - step: "Confirm the top bar title shows Departures"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Departures
+
+  - step: "Confirm the station header shows Berlin central bus station"
+    recording:
+      android:
+        - assertVisibleBySelector:
+            nodeSelector:
+              androidAccessibility:
+                textRegex: Berlin central bus station
+
+  - step: "Confirm the station header shows the zone label with the current UTC offset"
+    recording:
+      android:
+        - scrollUntilTextIsVisible:
+            textRegex: Times in Europe/Berlin \(UTC\+[12]\)
+
+  - step: "Confirm a departure row has the direction, line code and departure time"
+    recording:
+      android:
+        - scrollUntilTextIsVisible:
+            textRegex: Line .+ to .+, departs \d{2}:\d{2}
