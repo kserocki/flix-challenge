@@ -137,6 +137,15 @@ class DeparturesResponseMapperTest {
     }
 
     @Test
+    fun `skips a ride with a blank id`() {
+        val response = aResponseDto(rides = listOf(validRideDto(id = "ok"), validRideDto().copy(id = "   ")))
+
+        val result = assertIs<Result.Success<StationTimetable>>(response.toDomain())
+
+        assertEquals(listOf("ok"), result.value.departures.map { it.id })
+    }
+
+    @Test
     fun `skips a ride without a line`() {
         val response = aResponseDto(rides = listOf(validRideDto(id = "ok"), validRideDto().copy(line = null)))
 

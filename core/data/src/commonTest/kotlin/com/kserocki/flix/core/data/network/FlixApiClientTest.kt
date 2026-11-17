@@ -5,10 +5,11 @@ import com.kserocki.flix.core.data.logging.RecordingDataLogger
 import com.kserocki.flix.core.domain.model.TimetableWindow
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.http.Headers
+import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.Url
+import io.ktor.http.Headers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,9 +22,9 @@ private val A_WINDOW = TimetableWindow(
 
 class FlixApiClientTest {
 
-    private fun jsonMockEngine(body: String, capturedUrls: MutableList<Url>): MockEngine =
+    private fun jsonMockEngine(body: String, capturedRequests: MutableList<HttpRequestData>): MockEngine =
         MockEngine { request ->
-            capturedUrls += request.url
+            capturedRequests += request
             respond(
                 content = body,
                 status = HttpStatusCode.OK,
@@ -36,12 +37,14 @@ class FlixApiClientTest {
 
     @Test
     fun `requests the departures of the configured station`() = runTest {
-        val urls = mutableListOf<Url>()
-        val client = apiClient(jsonMockEngine(REAL_DEPARTURES_RESPONSE, urls))
+        val requests = mutableListOf<HttpRequestData>()
+        val client = apiClient(jsonMockEngine(REAL_DEPARTURES_RESPONSE, requests))
 
         client.fetchDepartures(A_WINDOW)
 
-        val requestedUrlWithoutQuery = urls.single().toString().substringBefore('?')
+        val request = requests.single()
+        assertEquals(HttpMethod.Get, request.method)
+        val requestedUrlWithoutQuery = request.url.toString().substringBefore('?')
         assertEquals(
             "https://global.api.flixbus.com/gis/v2/timetable/dcbaaee6-9603-11e6-9066-549f350fcb0c/departures",
             requestedUrlWithoutQuery,
@@ -50,24 +53,24 @@ class FlixApiClientTest {
 
     @Test
     fun `sends the window as UTC timestamps with milliseconds`() = runTest {
-        val urls = mutableListOf<Url>()
-        val client = apiClient(jsonMockEngine(REAL_DEPARTURES_RESPONSE, urls))
+        val requests = mutableListOf<HttpRequestData>()
+        val client = apiClient(jsonMockEngine(REAL_DEPARTURES_RESPONSE, requests))
 
         client.fetchDepartures(A_WINDOW)
 
-        val parameters = urls.single().parameters
+        val parameters = requests.single().url.parameters
         assertEquals("2026-11-16T15:00:00.000Z", parameters["from"])
         assertEquals("2026-11-16T17:00:00.000Z", parameters["to"])
     }
 
     @Test
     fun `sends the api key`() = runTest {
-        val urls = mutableListOf<Url>()
-        val client = apiClient(jsonMockEngine(REAL_DEPARTURES_RESPONSE, urls))
+        val requests = mutableListOf<HttpRequestData>()
+        val client = apiClient(jsonMockEngine(REAL_DEPARTURES_RESPONSE, requests))
 
         client.fetchDepartures(A_WINDOW)
 
-        assertEquals("e8d85577-2fb3-4d44-8091-ffb3da46e9ce", urls.single().parameters["apiKey"])
+        assertEquals("e8d85577-2fb3-4d44-8091-ffb3da46e9ce", requests.single().url.parameters["apiKey"])
     }
 
     @Test
