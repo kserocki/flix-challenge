@@ -27,4 +27,4 @@ See `API.md`.
 ## Scope agreed with the user (on top of the brief)
 - Loading, empty, and error states with retry. Pull-to-refresh. Day headers when the window crosses midnight.
 - A station header showing the station name and its time zone.
-- Out of scope for now: offline cache, auto-refresh, real-time delays (`status.deviation`), an iOS app.
+- Out of scope for now: offline cache, auto-refresh (#11), real-time delays (`status.deviation`, #10), an iOS app.

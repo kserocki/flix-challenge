@@ -24,7 +24,7 @@ The behaviour the app must have. Every rule has an id, so tests and reviews can 
 - **TT-11** First load shows a full-screen loading indicator.
 - **TT-12** Zero departures in the window shows the station header and an empty state ("No departures in the next 2 hours") with a **Refresh** action that behaves like pull-to-refresh.
 - **TT-13** An error on first load shows a full-screen error with a message that matches the error type (no connection / server problem / unexpected data) and a **Retry** button.
-- **TT-14** Pull-to-refresh reloads with a new window (TT-1) and keeps the current list visible while it loads. If a refresh fails, the old list stays and a long snackbar shows the error with a **Retry** action. The list is never replaced by a full-screen error. Screen-reader users get a "Refresh departures" accessibility action, because they can't pull to refresh.
+- **TT-14** Pull-to-refresh reloads with a new window (TT-1) and keeps the current list visible while it loads. If a refresh fails, the old list stays and a long snackbar shows the error with a **Retry** action. The list is never replaced by a full-screen error. Screen-reader users get a "Refresh departures" accessibility action, because they can't pull to refresh. A Refresh or Retry while a load is in flight is ignored (single-flight). Starting a new refresh dismisses a refresh-error snackbar that is still showing.
 - **TT-15** Activity recreation (rotation, theme, font or locale change) doesn't trigger a new network call if data is already loaded (the state lives in the ViewModel). After the process is killed, the screen loads again with a fresh window, because restoring a saved list would show stale departures.
 
 ## Data tolerance

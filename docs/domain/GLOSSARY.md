@@ -13,5 +13,8 @@ Use these terms exactly, in code and in docs.
 | **Scheduled departure** | The planned departure instant from this station, in UTC. | `Departure.scheduledAt: Instant` |
 | **Timetable window** | The time range we ask for: `[now, now + 2h]`. | `TimetableWindow(from, to)` |
 | **Station timetable** | A station plus its departures in the window, sorted by scheduled time. | `StationTimetable(station, departures)` |
-| **Deviation** | Real-time delay info (`LATE`, `ON_TIME`, estimated time). **Not used yet** (out of scope). | – |
+| **Board** | What the screen shows for the window: `Loading`, the departures in board order (sorted, deduped) as `Departures`, or the `Empty`/`Error` state. | `TimetableBoard` (`Loading`/`Departures`/`Empty`/`Error`, UI), `inBoardOrder()` (use case) |
+| **Zone label** | The station header's `<IANA id> (UTC±offset)` text (TT-8). | `StationHeaderUiModel.zoneLabel` |
+| **Day header** | `Today` / `Tomorrow` / a date above departures when the window crosses station midnight (TT-10). | `TimetableListItem.DayHeader`, `DayLabel` |
+| **Deviation** | Real-time delay info (`LATE`, `ON_TIME`, estimated time). **Not used yet** (#10). | – |
 | **Brand** | The operator brand (`FlixBus`, `FlixTrain`, …). Not shown yet. | – |

@@ -36,7 +36,7 @@ Everything else is ignored (`ignoreUnknownKeys = true`). DTOs declare only these
 
 ## Observed facts (real response, 2026-11-16, saved in `departures-response-sample.json`)
 - Each ride has many more fields than the brief shows: `calls[]` (all stops of the ride, each with its own `timezone`), `location`, `vehicle`, `platform`, `omitted_calls`, `brand`.
-- `status.deviation` is sometimes present: `deviation_class` (`LATE`, `ON_TIME`, …), `deviation_seconds`, `deviation_timestamp` (estimated time). Sometimes it is `null`. **Not used now** (out of scope). It's a good candidate for a follow-up.
+- `status.deviation` is sometimes present: `deviation_class` (`LATE`, `ON_TIME`, …), `deviation_seconds`, `deviation_timestamp` (estimated time). Sometimes it is `null`. **Not used now** (out of scope). Tracked in #10.
 - `scheduled_timestamp` has no milliseconds, while the request format has them. The parser must accept both.
 - `platform` is `null` at Berlin ZOB.
 - The response returned rides already in scheduled order. We still sort (TT-5), because the API doesn't guarantee it.
