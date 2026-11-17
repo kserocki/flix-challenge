@@ -3,7 +3,9 @@ package com.kserocki.flix.feature.timetable.impl.presentation
 import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
@@ -23,11 +25,9 @@ import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertTrue
 
 /**
- * Proves review #4/round-1 finding 1 for real: TalkBack can only reach a node that merges its
- * descendants (or a speaking leaf), so the station header's "Refresh departures" action is
- * unreachable unless it sits on one merged, heading node (`TimetableScreen.kt`'s
- * `TimetableBoardList`). A device/uiautomator check can't show this (custom actions aren't in the
- * uiautomator dump), so this runs the real semantics tree on the JVM with Robolectric.
+ * TalkBack only focuses a node that merges its descendants or a speaking leaf, so the header's
+ * refresh action must sit on one merged heading node. uiautomator can't show custom actions, so
+ * this checks the real semantics tree on the JVM.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -93,8 +93,17 @@ class TimetableContentSemanticsTest {
         setContent(state = TimetableUiState(board = TimetableBoard.Loading), onIntent = {})
         val description = context.getString(R.string.timetable_loading)
 
-        composeTestRule.onNodeWithContentDescription(description).assertIsDisplayed()
+        // mergesDescendants(), not just hasContentDescription(), pins the fix: the Box isn't a
+        // leaf (it wraps a CircularProgressIndicator), so without merging it would carry the
+        // description but TalkBack would skip it for not being screen-reader-focusable.
+        composeTestRule
+            .onNodeWithContentDescription(description)
+            .assertIsDisplayed()
+            .assert(mergesDescendants())
     }
+
+    private fun mergesDescendants(): SemanticsMatcher =
+        SemanticsMatcher("merges descendants") { node: SemanticsNode -> node.config.isMergingSemanticsOfDescendants }
 
     private fun setContent(state: TimetableUiState, onIntent: (TimetableIntent) -> Unit) {
         composeTestRule.setContent {
