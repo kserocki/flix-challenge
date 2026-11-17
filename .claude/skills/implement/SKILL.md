@@ -84,7 +84,7 @@ Spawn a fresh `reviewer` → `review-R.md`.
    Screenshots: commit the selected ones under `docs/screenshots/` in the branch (the repo is private, so external hosting isn't used) and link them relatively.
 3. Wait for CI (`gh pr checks <pr> --watch` with a Bash timeout). If it's red, send it back to the owner.
 4. Create follow-up issues found in the review (`gh issue create`).
-5. **The user merges** (squash). Never merge or push to `main` yourself unless the user explicitly says so. After the merge: `git worktree remove`, and delete the local branch.
+5. **The user merges** (squash). Never merge or push to `main` yourself unless the user explicitly says so. After the merge: remove the `in progress` label (`gh issue edit <N> --remove-label "in progress"`), `git worktree remove`, and delete the local branch.
 
 ## Report to the user (per issue)
 PR link · owners involved · review rounds · qa pass/fail · questions asked and answered · follow-ups.
