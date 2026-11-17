@@ -216,17 +216,15 @@ private fun TimetableBoardList(
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
             stationHeader?.let { header ->
                 item(key = "station-header", contentType = "station-header") {
+                    val refreshActions = remember(refreshAccessibilityLabel, onRefresh) {
+                        listOf(CustomAccessibilityAction(refreshAccessibilityLabel) { onRefresh(); true })
+                    }
                     StationHeader(
                         stationName = header.stationName,
                         zoneLabel = header.zoneLabel,
                         modifier = Modifier.semantics(mergeDescendants = true) {
                             heading()
-                            customActions = listOf(
-                                CustomAccessibilityAction(refreshAccessibilityLabel) {
-                                    onRefresh()
-                                    true
-                                },
-                            )
+                            customActions = refreshActions
                         },
                     )
                 }
