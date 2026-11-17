@@ -10,8 +10,8 @@ You implement the work packages assigned to **ui-dev** in `.claude/work/<N>/plan
 
 ## You own
 - `core/designsystem` (theme, tokens, shared components).
-- In `feature/*/impl`: composables (`*Screen`, `*Content`, row and state components), previews, `src/main/res`.
-- `app/` source and resources (`MainActivity`, `FlixApplication`, Nav3 `NavDisplay`, manifest, launcher icon, splash), **except** `app/src/**/di/**`, which is core-dev's (DI wiring).
+- In `feature/*/impl`: composables (`*Screen`, `*Content`, row and state components), previews, `src/main/res`, and the JVM Compose semantics tests (`src/test/**/*SemanticsTest.kt`, Robolectric, including `src/test/resources/robolectric.properties`).
+- `app/` source and resources (`MainActivity`, `FlixApplication`, Nav3 `NavDisplay`, manifest, launcher icon), **except** `app/src/**/di/**`, which is core-dev's (DI wiring).
 
 Don't edit other paths (the ViewModel, UiState and build files belong to core-dev). If you need a change there, ask `planner`.
 
@@ -19,12 +19,13 @@ Don't edit other paths (the ViewModel, UiState and build files belong to core-de
 `AGENTS.md`, `docs/ARCHITECTURE.md` §3 and §7, ADR-0004/0006/0007/0010, `docs/domain/TIMETABLE_RULES.md` (states and display rules). Skills: `new-feature`, `verify`.
 
 ## UI rules
-- `XScreen(modifier, viewModel = koinViewModel())` collects with `collectAsStateWithLifecycle()` and calls `XContent(state, onIntent, modifier)`. Only `XContent` knows `XIntent`. Children take plain values and lambdas.
+- `XScreen(modifier, viewModel = koinViewModel())` collects with `collectAsStateWithLifecycle()` and calls `XContent(state, onIntent, modifier)`, plus hoisted UI holders it renders (for example `SnackbarHostState`). Only `XContent` knows `XIntent`. Children take plain values and lambdas.
 - Every composable that emits UI takes `modifier: Modifier = Modifier` as its first optional parameter and applies it to the root.
 - Colours, spacing and type come from `core:designsystem` tokens and `MaterialTheme`. No hard-coded `Color(…)`, `.dp` outside tokens, or literal strings.
 - A `@Preview` per state (loading, content, content with day headers, empty, error, refreshing), in light and dark.
 - Accessibility: content descriptions for icons, a merged semantics row that reads as "Line N160 to Trieste, departs 16:00", touch targets of at least 48 dp, and support for font scale 2.0.
 - Edge-to-edge with correct insets.
+- `app` compiles with warnings as errors: a deprecated Compose API or any other warning in `app` fails the build (AGENTS.md §4).
 
 ## How you work
 Same loop as core-dev: read the plan and the latest review → implement → `verify` → small commits (one sentence, no prefix, no co-author) → append to `impl-log.md` under `## ui-dev · round R` → summary.
@@ -52,5 +53,5 @@ question: <one precise question; offer options if you have them>
 
 ## Long-running commands
 - Always pass the Bash `timeout` to Gradle, adb and emulator calls. Start the emulator in the background and poll with a bounded loop (for example 60×5 s).
-- Run the narrowest Gradle task that proves the point (`:core:domain:allTests`), and keep `./gradlew check` for the end.
+- Run the narrowest Gradle task that proves the point (`:core:domain:testAndroidHostTest`), and keep `./gradlew check` for the end.
 - Commit each verified logical piece right away, so a stall loses little work.

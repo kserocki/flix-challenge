@@ -23,4 +23,4 @@ The label is instead computed with kotlinx-datetime alone, so it is identical on
 - + Times are correct regardless of the device settings. Tests pin both device and station zones.
 - + The zone label is deterministic and identical on the JVM and on a real device; no test diverges from what the user sees.
 - − A broken zone blocks the screen instead of showing possibly wrong times. This is accepted.
-- − No locale-native abbreviation (`CET`/`CEST`); the IANA id plus a numeric offset is less familiar at a glance. Accepted (Q1 of #4); tracked as a follow-up if localised abbreviations are wanted later.
+- − No locale-native abbreviation (`CET`/`CEST`); the IANA id plus a numeric offset is less familiar at a glance. Accepted (Q1 of #4) and rejected, not deferred: Android's own locale data gives `GMT+01:00`/`GMT+02:00` on device, not `CET`/`CEST` (see the amendment above), so there is no reliable localised abbreviation to show instead.

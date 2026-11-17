@@ -6,7 +6,7 @@
 The user wants the domain and data layers to be Kotlin Multiplatform and consumed by the Android app. An iOS app isn't in scope.
 
 ## Decision
-- `core:domain`, `core:data`, `core:common` and `core:testing` are KMP modules with targets `androidTarget` (via `com.android.kotlin.multiplatform.library`), `iosArm64` and `iosSimulatorArm64`.
+- `core:domain`, `core:data`, `core:common` and `core:testing` are KMP modules with targets `android` (the AGP `com.android.kotlin.multiplatform.library` target), `iosArm64` and `iosSimulatorArm64`.
 - All code lives in `commonMain`. Platform code is limited to the Ktor engine (OkHttp on Android, Darwin on iOS).
 - Only multiplatform libraries: Ktor, kotlinx-serialization, kotlinx-datetime, kotlinx-coroutines, `kotlin.time`.
 - Presentation (ViewModels, Compose) stays Android-only in `feature:*:impl`.

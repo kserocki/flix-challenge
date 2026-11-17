@@ -1,6 +1,6 @@
 # ADR-0003: Koin with annotations and the Koin compiler plugin
 
-- Status: Accepted · 2026-11-16 · amended 2026-11-16
+- Status: Accepted · 2026-11-16 · amended 2026-11-16 (#2), 2026-11-17 (#3)
 
 ## Context
 We need DI that works in KMP modules and Android, is light, and is checked at compile time. The user asked for Koin with annotations (`@KoinViewModel`).
@@ -19,12 +19,12 @@ The Koin compiler plugin's own docs confirm this: *"every Gradle module that dec
 
 ## Decision
 - Koin with `koin-annotations` and the **Koin compiler plugin** (`io.insert-koin.compiler.plugin`), not KSP. The plugin generates the module definitions and verifies the graph at compile time.
-- One `@Module @ComponentScan("<root package>")` class per module with bindings. Classes are annotated `@Single`, `@Factory` or `@KoinViewModel`. Provider functions only for third-party types (`HttpClient`, `Json`, `Clock`) **and**, as of this amendment, for `core:domain` use cases (see below).
+- One `@Module @ComponentScan("<root package>")` class per module with bindings. Classes are annotated `@Single`, `@Factory` or `@KoinViewModel`. Provider functions only for third-party types (`HttpClient`, `Clock`) **and**, as of this amendment, for `core:domain` use cases (see below).
 - **Option D: `core:domain` is Koin-free.** No `koin-annotations`, no compiler plugin, no `@Factory`. Use cases are plain classes with a constructor. `app`'s `DomainModule` (an `@Module`, no `@ComponentScan`) has one explicit `@Factory` provider function per use case, for example `fun getStationTimetableUseCase(repository: DepartureRepository, clock: Clock): GetStationTimetableUseCase`. This is a documented exception to "provider functions only for third-party types": the domain's purity matters more than avoiding one line of repetition per use case.
 - Koin is started only in `app` (`FlixApplication`).
 
 ## Multi-module verification (amendment, #3)
-`core:data` applies `flix.koin` and declares its own `@Module @ComponentScan` (`DataModule`), including a binding (`HttpClient`) that needs a type (`DataLogger`) bound only in `app`. `app` is where the full graph is actually checked: it applies the plugin too, registers every module (`AppModule`, `DomainModule`, `DataModule`) on `FlixKoinApplication`, and compiles with `allWarningsAsErrors = true`, so `KOIN-W008` ("graph not verified … missing hints") fails the build instead of only warning. `koinCompiler { versionCheckSeverity = "info" }` demotes the plugin's own "Kotlin version newer than verified" note, which isn't a defect. Verified by removing `core:data`'s plugin application (keeping the raw `koin-core`/`koin-annotations` dependencies) and rebuilding `app`: it fails with exactly `KOIN-W008`; reverting fixes it. The platform HTTP engine (OkHttp/Darwin) is a plain Kotlin `expect`/`actual` function, not a per-platform Koin module, since picking an engine is not a DI concern.
+`core:data` applies `flix.koin` and declares its own `@Module @ComponentScan` (`DataModule`), including a binding (`HttpClient`) that needs a type (`DataLogger`) bound only in `app`. `app` is where the full graph is actually checked: it applies the plugin too, registers every module (`AppModule`, `DomainModule`, `DataModule`, `TimetableModule`) on `FlixKoinApplication`, and compiles with `allWarningsAsErrors = true`, so `KOIN-W008` ("graph not verified … missing hints") fails the build instead of only warning. `koinCompiler { versionCheckSeverity = "info" }` demotes the plugin's own "Kotlin version newer than verified" note, which isn't a defect. Verified by removing `core:data`'s plugin application (keeping the raw `koin-core`/`koin-annotations` dependencies) and rebuilding `app`: it fails with exactly `KOIN-W008`; reverting fixes it. The platform HTTP engine (OkHttp/Darwin) is a plain Kotlin `expect`/`actual` function, not a per-platform Koin module, since picking an engine is not a DI concern.
 
 ## Alternatives
 - Hilt: Android-only, can't be used in KMP `commonMain`.

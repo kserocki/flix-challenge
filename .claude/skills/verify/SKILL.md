@@ -10,9 +10,10 @@ Run from the repo root (or the worktree root), always with a Bash `timeout` (at 
 ## While working (narrowest first)
 | Touched | Run |
 |---|---|
-| `core:domain` / `core:common` | `./gradlew :core:domain:jvmTest` if a JVM target exists, otherwise `:core:domain:testAndroidHostTest` (the task name depends on the KMP Android target, see `./gradlew :core:domain:tasks --group verification`) |
-| `core:data` | the same for `:core:data` |
+| `core:domain` / `core:common` / `core:testing` | `./gradlew :core:domain:testAndroidHostTest` (same for `:core:common`, `:core:testing`). `:<module>:allTests` adds the iOS simulator tests (macOS only) |
+| `core:data` | `./gradlew :core:data:testAndroidHostTest` |
 | `feature:*:impl` | `./gradlew :feature:timetable:impl:testDebugUnitTest` |
+| `app` (DI wiring) | `./gradlew :app:testDebugUnitTest` (`KoinGraphTest`) |
 | Any Kotlin | `./gradlew detekt` |
 | Module structure, names, imports | `./gradlew :konsist-tests:test` |
 
@@ -23,7 +24,7 @@ Run from the repo root (or the worktree root), always with a Bash `timeout` (at 
 ```
 
 ## UI changes (before review)
-With the emulator running and the debug app installed, replay every trail in `trails/` (`trailblaze run trails/<scenario>`). A red trail is either a regression (fix the code) or an intended UI change (`qa` re-records it). Never edit the recorded actions by hand to make a trail pass.
+With the emulator running and the debug app installed, replay every trail in `trails/` (`trailblaze run trails/<scenario>`). A red trail is either a regression (fix the code) or an intended UI change (`qa` re-records it). Never edit the recorded actions by hand to make a trail pass. Two trails need device setup first (`.claude/agents/qa.md` "Device settings"): `timetable-offline-error` (offline) and `timetable-foreign-device-zone` (device zone `America/New_York`). Restore the device afterwards.
 
 ## Rules
 - Green means green: **no baselines, no `@Suppress`** without a one-line reason next to it that the reviewer accepts, and no `@Ignore`d tests.

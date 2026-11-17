@@ -10,7 +10,7 @@ A `konsist-tests` JVM module runs as part of `./gradlew check`. It keeps a **sma
 4. Classes ending in `Dto` live only in `core:data`.
 5. ViewModels end with `ViewModel`, sit in a `presentation` package and have `@KoinViewModel`. Use cases end with `UseCase` and have exactly one public `operator fun invoke`.
 
-Rules are deliberately few and readable. We add a rule only when a review catches the same mistake twice.
+Rules are deliberately few and readable. We add a rule only when a review catches the same mistake twice. Each rule has a companion test that runs it against a deliberately broken fixture (`konsist-tests/src/test/fixtures/`) and expects it to fail, so a rule can't silently pass everything.
 
 ## Consequences
 - + Architecture drift fails CI.

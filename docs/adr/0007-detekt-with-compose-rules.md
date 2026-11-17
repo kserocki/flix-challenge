@@ -1,6 +1,6 @@
 # ADR-0007: Detekt with Compose rules (basic config)
 
-- Status: Accepted · 2026-11-16
+- Status: Accepted · 2026-11-16 · amended 2026-11-16
 
 ## Decision
 - Detekt on every module through `flix.quality`, with `buildUponDefaultConfig = true` and a short `config/detekt/detekt.yml`. **No baseline.**

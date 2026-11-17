@@ -5,7 +5,7 @@
 Clean Architecture in three layers, with dependencies pointing inwards to the domain:
 
 ```
-              Android only                         Kotlin Multiplatform (androidTarget, iosArm64, iosSimulatorArm64)
+              Android only                         Kotlin Multiplatform (android, iosArm64, iosSimulatorArm64)
  ┌───────────────────────────────────┐   ┌──────────────────────────────────────────────────────────────┐
  │ app  ──► feature:timetable:impl ──┼──►│ core:domain  ◄── core:data ──► Ktor, kotlinx-serialization   │
  │  │            │                   │   │      ▲               │                                       │
@@ -24,10 +24,10 @@ Clean Architecture in three layers, with dependencies pointing inwards to the do
 
 | Module | Type | Depends on | Contains |
 |---|---|---|---|
-| `app` | Android application | everything below | `FlixApplication` (Koin start), `MainActivity`, Nav3 `NavDisplay`, entry registration, `DomainModule` (use-case providers), `LogcatDataLogger`, the `Clock` binding |
+| `app` | Android application | everything below | `FlixApplication` (starts Koin with `FlixKoinApplication`), `MainActivity`, `FlixNavHost` (Nav3 `NavDisplay`, entry registration), `AppModule` (the `Clock` binding), `DomainModule` (use-case providers), `LogcatDataLogger` |
 | `feature:timetable:api` | Android library | – | `TimetableNavKey` |
-| `feature:timetable:impl` | Android library | `feature:timetable:api`, `core:domain`, `core:common`, `core:designsystem` | `TimetableViewModel`, `TimetableUiState/Intent/Effect`, UI mappers (domain → UI model), `TimetableModule` (Koin), `TimetableScreen/Content` |
-| `core:domain` | KMP | `core:common` | `Station`, `Departure`, `StationTimetable`, `DepartureRepository`, `GetStationTimetableUseCase`, `DomainError` |
+| `feature:timetable:impl` | Android library | `feature:timetable:api`, `core:domain`, `core:common`, `core:designsystem` | `TimetableViewModel`, `TimetableUiState/Intent/Effect`, UI mappers (domain → UI model), `TimetableModule` (Koin), `TimetableScreen/Content`, `timetableEntry()` (Nav3 entry) |
+| `core:domain` | KMP | `core:common` | `Station`, `Departure`, `StationTimetable`, `TimetableWindow`, `DepartureRepository`, `GetStationTimetableUseCase`, `DomainError` |
 | `core:data` | KMP | `core:domain`, `core:common` | `FlixApiConfig`, `FlixApiClient`, `DeparturesResponseDto`, `toDomain()` mappers, `NetworkDepartureRepository`, `DataLogger` (bound by `app`), Ktor engine per platform (OkHttp / Darwin) |
 | `core:common` | KMP | – | `Result<T, E>`, `suspendRunCatching` |
 | `core:designsystem` | Android library | – | `FlixTheme`, colour/spacing/type tokens, `FlixTopAppBar`, shared loading and message-state components |
@@ -77,7 +77,7 @@ User ──Intent──► TimetableViewModel.onIntent()
 - Points in time are `kotlin.time.Instant`. Zones are `kotlinx.datetime.TimeZone`.
 - "Now" comes from an injected `kotlin.time.Clock`, so the window computation and "already departed" logic are deterministic in tests.
 - Request window: `from = now`, `to = now + 2h`, both ISO-8601 UTC with milliseconds.
-- Display: `scheduledDeparture.toLocalDateTime(station.timeZone)`. **The device time zone is never used** for departure times. See `docs/domain/TIMETABLE_RULES.md`.
+- Display: `departure.scheduledAt.toLocalDateTime(station.timeZone)`. **The device time zone is never used** for departure times. See `docs/domain/TIMETABLE_RULES.md`.
 
 ## 6. Dependency injection
 
@@ -95,9 +95,11 @@ Navigation 3 (ADR-0006). `feature:*:api` exposes a `@Serializable` `NavKey`. `fe
 
 - **Detekt** with the Compose rules (`io.nlopez.compose.rules`), basic config (ADR-0007).
 - **Konsist**: the rules from `AGENTS.md` §3 (ADR-0005).
+- **Android Lint** (AGP defaults) on the Android modules, part of `check`.
 - **Unit tests**: `commonTest` for KMP modules, JVM tests for Android modules.
-- **Compose semantics tests** for `feature:*:impl` run on the JVM with Robolectric + `ui-test-junit4` (set up by `flix.android.feature`). Robolectric is pinned to `sdk=35` in each module's `src/test/resources/robolectric.properties`, because SDK 36+ sandboxes need Java 21 and CI/local use JDK 17. Raise it together with the JDK.
-- **CI**: GitHub Actions (ADR-0008).
+- **Compose semantics tests** for `feature:*:impl` run on the JVM with Robolectric + `ui-test-junit4` (set up by `flix.android.feature`). Robolectric is pinned to `sdk=35` in each module's `src/test/resources/robolectric.properties`, because SDK 36+ sandboxes need Java 21 and CI/local use JDK 17. Raise it together with the JDK (#13).
+- **UI trails**: Trailblaze trails in `trails/`, replayed on an emulator before review (ADR-0011). Not in CI yet (#6).
+- **CI**: GitHub Actions (ADR-0008): `check :app:assembleDebug` on Linux, iOS simulator tests and the device compile on macOS.
 
 ## 9. Versions
 
