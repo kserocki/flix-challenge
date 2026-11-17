@@ -29,9 +29,9 @@ feature/timetable/api         NavKey of the timetable screen (public contract)
 feature/timetable/impl        Timetable screen: ViewModel (MVI-lite), Compose UI, feature DI
 core/domain        (KMP)      Models, repository interfaces, use cases, DomainError. Pure Kotlin
 core/data          (KMP)      Ktor client, DTOs, mappers, repository implementations
-core/common        (KMP)      Result type, dispatchers, Clock provider, cancellation-safe helpers
+core/common        (KMP)      Result type and cancellation-safe helpers (suspendRunCatching)
 core/designsystem             Compose theme, tokens, shared components
-core/testing       (KMP)      Fakes, test dispatcher rule, fixture builders
+core/testing       (KMP)      Fakes (FakeDepartureRepository), TestClock, fixture builders
 build-logic/                  Convention plugins (flix.*)
 konsist-tests/                Architecture rules (Konsist), run by ./gradlew check
 config/detekt/                Detekt config incl. Compose rules
@@ -51,15 +51,15 @@ docs/                         Architecture, ADRs, domain knowledge
 
 ## 4. Conventions
 
-- **Screens, MVI-lite with UDF** (ADR-0004): `XUiState` (immutable data class, `ImmutableList` for lists), `sealed interface XIntent`, optional `sealed interface XEffect` for one-off events. `XViewModel` exposes `val state: StateFlow<XUiState>` and `fun onIntent(intent: XIntent)`. Stateful `XScreen` (gets the VM via `koinViewModel()`) → stateless `XContent(state, onIntent, modifier)` with a `@Preview` per state, light and dark. Only `XContent` knows `XIntent`. Child composables take plain values and lambdas. Effect keys: collect one-off effects in `LaunchedEffect(Unit)`. Key an effect only on values whose change must restart it, and never on stable holders (`SnackbarHostState`, the ViewModel, resources).
+- **Screens, MVI-lite with UDF** (ADR-0004): `XUiState` (immutable data class, `ImmutableList` for lists), `sealed interface XIntent`, optional `sealed interface XEffect` for one-off events. `XViewModel` exposes `val state: StateFlow<XUiState>` and `fun onIntent(intent: XIntent)`. Stateful `XScreen` (gets the VM via `koinViewModel()`) → stateless `XContent(state, onIntent, modifier)` (plus hoisted UI holders it renders, such as a `SnackbarHostState` owned by `XScreen`) with a `@Preview` per state, light and dark. Only `XContent` knows `XIntent`. Child composables take plain values and lambdas. Effect keys: collect one-off effects in `LaunchedEffect(Unit)`. Key an effect only on values whose change must restart it, and never on stable holders (`SnackbarHostState`, the ViewModel, resources).
 - **Use cases:** `VerbNounUseCase`, one `operator fun invoke`, no Android types.
 - **Repositories:** interface in `core:domain` (`DepartureRepository`), implementation in `core:data` (`NetworkDepartureRepository`).
 - **Errors:** repositories and use cases return `Result<T, DomainError>` (our own type in `core:common`, not `kotlin.Result`). No exceptions across layer boundaries. Never swallow `CancellationException` (use `suspendRunCatching`).
 - **Time:** `kotlin.time.Instant` for points in time and `kotlinx.datetime.TimeZone` for zones. Never call `Clock.System` directly outside DI: inject `Clock` so tests control "now". Departure times are shown in the **station's** time zone, never the device's (`docs/domain/TIMETABLE_RULES.md`).
-- **DI (Koin annotations + compiler plugin, ADR-0003):** each module that owns classes with bindings has one `@Module @ComponentScan("<module root package>")` class. Annotate classes with `@Single` (repositories, HTTP client holders) and `@KoinViewModel` (ViewModels). Provider functions are for third-party types (`HttpClient`, `Json`, `Clock`) **and**, because `core:domain` is Koin-free (option D), for every domain use case: one `@Factory` provider function per use case in `app`'s `DomainModule` (ADR-0003).
+- **DI (Koin annotations + compiler plugin, ADR-0003):** each module that owns classes with bindings has one `@Module @ComponentScan("<module root package>")` class. Annotate classes with `@Single` (repositories, HTTP client holders) and `@KoinViewModel` (ViewModels). Provider functions are for third-party types (`HttpClient`, `Clock`) **and**, because `core:domain` is Koin-free (option D), for every domain use case: one `@Factory` provider function per use case in `app`'s `DomainModule` (ADR-0003).
 - **Compiler warnings in `app`:** `app/build.gradle.kts` sets `allWarningsAsErrors = true`, so KOIN-W008 (an unverified Koin graph) fails the build there, and so does any other compiler warning in `app`'s own sources, including `ui-dev`'s Compose code. Fix the warning; don't suppress it without a written reason.
 - **Strings:** all user-visible text in `strings.xml`. No hard-coded UI strings, colours or dimensions outside `core:designsystem`.
-- **Tests:** `kotlin.test` + `kotlinx-coroutines-test` + Turbine. Fakes over mocks (fakes live in `core:testing`). Test names in backticks describe behaviour: `` `shows empty state when no departures in window` ``. Test names must not contain commas, because Kotlin/Native can't compile them for iOS.
+- **Tests:** `kotlin.test` + `kotlinx-coroutines-test` + Turbine. Fakes over mocks (fakes live in `core:testing`). Test names in backticks describe behaviour: `` `shows empty state when no departures in window` ``. Test names must not contain commas, because Kotlin/Native can't compile them for iOS. Compose semantics tests for `feature:*:impl` run on the JVM with Robolectric (`createComposeRule`), pinned to `sdk=35` until the JDK moves to 21 (#13, `docs/ARCHITECTURE.md` §8).
 - **Comments:** English, only for non-obvious logic, 1–3 lines. No ticket numbers except `TODO(#N)` pointing at an open GitHub issue.
 - **Commits:** small, one sentence, imperative, no prefix, no co-author trailer. Example: `Add departure mapper with station time zone handling`.
 
@@ -78,7 +78,7 @@ docs/                         Architecture, ADRs, domain knowledge
 | iOS tests + device compile | `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` (macOS only) | works |
 | Hit the real API | see `docs/domain/API.md` (curl with computed `from`/`to`) | works |
 
-A KMP module's Android unit test task is `:<module>:testAndroidHostTest` (JVM, fast, no simulator); `:<module>:allTests` runs that plus the iOS simulator tests, so it only works on macOS.
+A KMP module's Android unit test task is `:<module>:testAndroidHostTest` (JVM, fast, no simulator); `:<module>:allTests` runs that plus the iOS simulator tests, so it only works on macOS. On macOS, `./gradlew check` includes `allTests` and therefore the iOS simulator tests; on Linux those are skipped.
 
 CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux and `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` on macOS. Reproduce a CI failure locally with the same command.
 
