@@ -80,8 +80,8 @@ private fun LocalDate.toDayLabel(today: LocalDate): DayLabel = when (this) {
 }
 
 /**
- * `<id> (UTC±offset)`, for example `Europe/Berlin (UTC+1)` (Q1-A). A zone that is a fixed offset,
- * or whose id already equals the offset label (`UTC`), shows the offset label alone.
+ * `<id> (UTC±offset)`, for example `Europe/Berlin (UTC+1)`. A zone that is a fixed offset, or
+ * whose id already equals the offset label (`UTC`), shows the offset label alone.
  */
 private fun TimeZone.toZoneLabel(instant: Instant): String {
     val offsetLabel = offsetAt(instant).toOffsetLabel()
