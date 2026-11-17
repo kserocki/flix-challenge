@@ -8,6 +8,9 @@ sealed interface DomainError {
     /** Any non-2xx HTTP status (4xx/5xx). */
     data class Server(val code: Int) : DomainError
 
-    /** Malformed JSON, an unknown time zone id or a missing mandatory field. */
+    /**
+     * Malformed JSON, an unknown or missing time zone id, a missing mandatory field, every ride
+     * skipped (TT-16a), or any other exception the data layer didn't anticipate (a fallback).
+     */
     data object InvalidData : DomainError
 }
