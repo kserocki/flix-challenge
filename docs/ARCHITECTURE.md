@@ -24,11 +24,11 @@ Clean Architecture in three layers, with dependencies pointing inwards to the do
 
 | Module | Type | Depends on | Contains |
 |---|---|---|---|
-| `app` | Android application | everything below | `FlixApplication` (Koin start), `MainActivity`, Nav3 `NavDisplay`, entry registration, `DomainModule` (use-case providers) |
+| `app` | Android application | everything below | `FlixApplication` (Koin start), `MainActivity`, Nav3 `NavDisplay`, entry registration, `DomainModule` (use-case providers), `LogcatDataLogger`, the `Clock` binding |
 | `feature:timetable:api` | Android library | – | `TimetableNavKey` |
 | `feature:timetable:impl` | Android library | `feature:timetable:api`, `core:domain`, `core:common`, `core:designsystem` | `TimetableViewModel`, `TimetableUiState/Intent`, `TimetableScreen/Content`, UI mappers (domain → UI model) |
 | `core:domain` | KMP | `core:common` | `Station`, `Departure`, `StationTimetable`, `DepartureRepository`, `GetStationTimetableUseCase`, `DomainError` |
-| `core:data` | KMP | `core:domain`, `core:common` | `FlixApiClient`, `DeparturesResponseDto`, `toDomain()` mappers, `NetworkDepartureRepository`, Ktor engine per platform (OkHttp / Darwin) |
+| `core:data` | KMP | `core:domain`, `core:common` | `FlixApiConfig`, `FlixApiClient`, `DeparturesResponseDto`, `toDomain()` mappers, `NetworkDepartureRepository`, `DataLogger` (bound by `app`), Ktor engine per platform (OkHttp / Darwin) |
 | `core:common` | KMP | – | `Result<T, E>`, `suspendRunCatching` |
 | `core:designsystem` | Android library | – | `FlixTheme`, colour/spacing/type tokens, shared components (error/empty states) |
 | `core:testing` | KMP | `core:domain`, `core:common` | `FakeDepartureRepository`, `TestClock`, fixture builders |
@@ -64,10 +64,11 @@ User ──Intent──► TimetableViewModel.onIntent()
 
 ## 4. Error strategy
 
-- Ktor exceptions are caught **only** in `core:data` (with `suspendRunCatching`, which rethrows `CancellationException`) and mapped to `DomainError`:
-  - `DomainError.Network`: no connectivity, timeout.
-  - `DomainError.Server(code)`: any non-2xx HTTP status (4xx/5xx).
-  - `DomainError.InvalidData`: malformed JSON, unknown time zone id, missing mandatory fields.
+- Ktor exceptions are caught **only** in `core:data` (with `suspendRunCatching`, which rethrows `CancellationException`) and mapped to `DomainError`, in this order:
+  - `DomainError.Server(code)`: any non-2xx HTTP status (4xx/5xx), from Ktor's `ResponseException`.
+  - `DomainError.Network`: no connectivity, timeout, any `kotlinx.io.IOException`.
+  - `DomainError.InvalidData`: malformed JSON, a non-JSON body, an unknown or missing time zone, a missing mandatory field, and any other exception we didn't anticipate (a fallback, never a crash).
+- A response where `rides` isn't empty but every ride was skipped (TT-16) also counts as `DomainError.InvalidData` (TT-16a): an empty board would misleadingly imply there is nothing to show.
 - Use cases and repositories return `Result<T, DomainError>`. No exceptions cross a layer boundary.
 - The UI maps each `DomainError` to a user-facing message with a retry action.
 
@@ -83,6 +84,7 @@ User ──Intent──► TimetableViewModel.onIntent()
 Koin with annotations and the Koin compiler plugin (ADR-0003). This gives compile-time checks of the graph and no hand-written module DSL.
 - One `@Module @ComponentScan` per module that owns classes with bindings (`DataModule`, `TimetableModule`, `AppModule`).
 - `core:domain` has no Koin dependency at all; `app`'s `DomainModule` (plain `@Module`, no `@ComponentScan`) provides each use case through an explicit `@Factory` function (ADR-0003, option D).
+- `core:data`'s `DataModule` declares a binding (`HttpClient`) that needs `DataLogger`, a type only `app` binds (`LogcatDataLogger`). `app` is where the whole graph, across every module, is actually verified at compile time (`KOIN-W008`/`KOIN-D001`), with `allWarningsAsErrors` making an unverified graph fail the build (ADR-0003, ADR-0009).
 - `app` starts Koin with every module.
 
 ## 7. Navigation
