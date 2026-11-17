@@ -96,6 +96,7 @@ Navigation 3 (ADR-0006). `feature:*:api` exposes a `@Serializable` `NavKey`. `fe
 - **Detekt** with the Compose rules (`io.nlopez.compose.rules`), basic config (ADR-0007).
 - **Konsist**: the rules from `AGENTS.md` §3 (ADR-0005).
 - **Unit tests**: `commonTest` for KMP modules, JVM tests for Android modules.
+- **Compose semantics tests** for `feature:*:impl` run on the JVM with Robolectric + `ui-test-junit4` (set up by `flix.android.feature`). Robolectric is pinned to `sdk=35` in each module's `src/test/resources/robolectric.properties`, because SDK 36+ sandboxes need Java 21 and CI/local use JDK 17. Raise it together with the JDK.
 - **CI**: GitHub Actions (ADR-0008).
 
 ## 9. Versions
