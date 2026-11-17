@@ -10,22 +10,27 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.Lifecycle
@@ -40,6 +45,7 @@ import com.kserocki.flix.feature.timetable.impl.presentation.components.Departur
 import com.kserocki.flix.feature.timetable.impl.presentation.components.StationHeader
 import com.kserocki.flix.feature.timetable.impl.presentation.components.TimetableEmptyState
 import com.kserocki.flix.feature.timetable.impl.presentation.components.TimetableErrorState
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.toJavaLocalDate
 import org.koin.androidx.compose.koinViewModel
 import java.time.format.DateTimeFormatter
@@ -56,7 +62,9 @@ internal fun TimetableScreen(modifier: Modifier = Modifier, viewModel: Timetable
 
     LaunchedEffect(viewModel, snackbarHostState, lifecycleOwner, resources, retryActionLabel) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.effects.collect { effect ->
+            // collectLatest: an effect that arrives while a snackbar is still showing replaces it
+            // immediately (cancelling the suspended showSnackbar call dismisses its snackbar).
+            viewModel.effects.collectLatest { effect ->
                 val message = when (effect) {
                     is TimetableEffect.ShowRefreshError -> resources.getString(effect.reason.toRefreshErrorStringRes())
                 }
@@ -69,6 +77,14 @@ internal fun TimetableScreen(modifier: Modifier = Modifier, viewModel: Timetable
                     viewModel.onIntent(TimetableIntent.Refresh)
                 }
             }
+        }
+    }
+
+    // A refresh that succeeds sends no effect, so a stale refresh-error snackbar from an earlier
+    // failure wouldn't otherwise be replaced; dismiss it as soon as a new refresh starts.
+    LaunchedEffect(state.isRefreshing, snackbarHostState) {
+        if (state.isRefreshing) {
+            snackbarHostState.currentSnackbarData?.dismiss()
         }
     }
 
@@ -121,24 +137,28 @@ internal fun TimetableContent(
                 stationHeader = state.stationHeader,
                 isRefreshing = state.isRefreshing,
                 contentPadding = innerPadding.toListContentPadding(layoutDirection),
-                onIntent = onIntent,
+                onRefresh = { onIntent(TimetableIntent.Refresh) },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = innerPadding.calculateTopPadding()),
             ) {
-                items(board.items, key = { it.key }) { item -> TimetableListItemRow(item) }
+                items(
+                    board.items,
+                    key = { it.key },
+                    contentType = { it.contentType() },
+                ) { item -> TimetableListItemRow(item) }
             }
 
             TimetableBoard.Empty -> TimetableBoardList(
                 stationHeader = state.stationHeader,
                 isRefreshing = state.isRefreshing,
                 contentPadding = innerPadding.toListContentPadding(layoutDirection),
-                onIntent = onIntent,
+                onRefresh = { onIntent(TimetableIntent.Refresh) },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = innerPadding.calculateTopPadding()),
             ) {
-                item(key = "empty") {
+                item(key = "empty", contentType = "empty") {
                     TimetableEmptyState(
                         stationName = state.stationHeader?.stationName.orEmpty(),
                         onRefresh = { onIntent(TimetableIntent.Refresh) },
@@ -148,6 +168,11 @@ internal fun TimetableContent(
             }
         }
     }
+}
+
+private fun TimetableListItem.contentType(): String = when (this) {
+    is TimetableListItem.DayHeader -> "day-header"
+    is TimetableListItem.DepartureRow -> "departure-row"
 }
 
 @Composable
@@ -168,26 +193,37 @@ private fun TimetableBoardList(
     stationHeader: StationHeaderUiModel?,
     isRefreshing: Boolean,
     contentPadding: PaddingValues,
-    onIntent: (TimetableIntent) -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     content: LazyListScope.() -> Unit,
 ) {
     val refreshAccessibilityLabel = stringResource(R.string.timetable_refresh_accessibility_action)
+    val pullToRefreshState = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = { onIntent(TimetableIntent.Refresh) },
+        onRefresh = onRefresh,
+        state = pullToRefreshState,
         modifier = modifier,
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+            )
+        },
     ) {
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
             stationHeader?.let { header ->
-                item(key = "station-header") {
+                item(key = "station-header", contentType = "station-header") {
                     StationHeader(
                         stationName = header.stationName,
                         zoneLabel = header.zoneLabel,
-                        modifier = Modifier.semantics {
+                        modifier = Modifier.semantics(mergeDescendants = true) {
+                            heading()
                             customActions = listOf(
                                 CustomAccessibilityAction(refreshAccessibilityLabel) {
-                                    onIntent(TimetableIntent.Refresh)
+                                    onRefresh()
                                     true
                                 },
                             )
@@ -210,5 +246,8 @@ private fun PaddingValues.toListContentPadding(layoutDirection: LayoutDirection)
 private fun DayLabel.toText(): String = when (this) {
     DayLabel.Today -> stringResource(R.string.timetable_day_today)
     DayLabel.Tomorrow -> stringResource(R.string.timetable_day_tomorrow)
-    is DayLabel.OtherDay -> date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+    is DayLabel.OtherDay -> {
+        val formatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
+        date.toJavaLocalDate().format(formatter)
+    }
 }
