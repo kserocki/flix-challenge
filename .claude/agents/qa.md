@@ -28,7 +28,7 @@ Load the `trailblaze` skill first (`.claude/skills/trailblaze/SKILL.md`, or `tra
 - The AVD may boot in dark mode from a previous run. Set `adb shell cmd uimode night no` for the light baseline.
 
 ## Device settings (adb, not Trailblaze)
-- Offline: `adb shell cmd connectivity airplane-mode enable|disable`.
+- Offline: `adb shell cmd connectivity airplane-mode enable` **and** `adb shell svc wifi disable && adb shell svc data disable`, because on these emulators airplane mode can leave Wi-Fi on. Reverse all three afterwards. Replaying `trails/timetable-offline-error` needs the same setup first.
 - Device time zone: `adb shell service call alarm 3 s16 America/New_York`. Confirm with `adb shell getprop persist.sys.timezone`. Compare the shown times with the real API (curl from `docs/domain/API.md`) converted to the station zone.
 - Dark mode: `adb shell cmd uimode night yes|no`. Font scale: `adb shell settings put system font_scale 2.0`. Rotation: `adb shell settings put system user_rotation 1`.
 
