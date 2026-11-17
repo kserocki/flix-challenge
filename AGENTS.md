@@ -80,7 +80,7 @@ docs/                         Architecture, ADRs, domain knowledge
 
 A KMP module's Android unit test task is `:<module>:testAndroidHostTest` (JVM, fast, no simulator); `:<module>:allTests` runs that plus the iOS simulator tests, so it only works on macOS. On macOS, `./gradlew check` includes `allTests` and therefore the iOS simulator tests; on Linux those are skipped.
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux and `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` on macOS. Reproduce a CI failure locally with the same command.
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs `./gradlew check :app:assembleDebug` on Linux, and `./gradlew iosSimulatorArm64Test compileKotlinIosArm64` on `macos-15` (Xcode 26.3). On pull requests the iOS job runs only when KMP sources, build logic or CI change; on `main` it always runs. `ci-passed` is the gate (ADR-0008). Reproduce a CI failure locally with the same command.
 
 ## 6. Skills (`.claude/skills/`)
 
