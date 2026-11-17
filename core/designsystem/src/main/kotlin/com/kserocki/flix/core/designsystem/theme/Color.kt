@@ -6,12 +6,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Flix brand colour tokens (Q7 of issue #4's plan). The light scheme uses Flix green on a near
- * white neutral, the dark scheme a deep green on a near black neutral. Every text-on-background
- * pair here was checked to at least 4.5:1 (WCAG AA); `error` keeps Material's own baseline red
- * instead of the brand hue, so the "something is wrong" colour stays universally recognisable.
+ * Flix brand colour tokens. The light scheme uses Flix green on a near white neutral, the dark
+ * scheme a deep green on a near black neutral. Every text-on-background pair here was checked to
+ * at least 4.5:1 (WCAG AA); `error` keeps Material's own baseline red instead of the brand hue,
+ * so the "something is wrong" colour stays universally recognisable.
  *
- * `primaryLight`/`onPrimaryContainerLight` and the window backgrounds **must** match
+ * `primaryContainerLight`/`onPrimaryContainerLight` and the window backgrounds **must** match
  * `core/designsystem/src/main/res/values{,-night}/colors.xml` (`flix_launcher_background`,
  * `flix_launcher_foreground`, `flix_window_background`): those XML colours paint the launcher
  * icon and the cold-start window, which can't read a Compose token.
@@ -39,7 +39,7 @@ private object FlixColorTokens {
     val SecondaryContainerDark = Color(0xFF3F4B3A)
     val OnSecondaryContainerDark = Color(0xFFE5E8E3)
 
-    // Tertiary: a complementary blue accent, kept for a second accent role if one is ever needed.
+    // Tertiary: a complementary blue accent, since M3's ColorScheme requires one.
     val TertiaryLight = Color(0xFF324467)
     val OnTertiaryLight = Color(0xFFFFFFFF)
     val TertiaryContainerLight = Color(0xFFDBDEE6)

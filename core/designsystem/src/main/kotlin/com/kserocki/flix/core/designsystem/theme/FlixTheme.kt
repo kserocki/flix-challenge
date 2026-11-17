@@ -10,7 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 
-/** The app's Material 3 theme: the Flix brand colour schemes (Q7 of issue #4), no dynamic colour. */
+/** The app's Material 3 theme: the Flix brand colour schemes, no dynamic colour. */
 @Composable
 fun FlixTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
