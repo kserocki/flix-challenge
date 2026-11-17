@@ -2,8 +2,14 @@ package com.kserocki.flix.app.di
 
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.Single
+import kotlin.time.Clock
 
-/** Empty for now: the app module has no bindings of its own yet. */
+/** Scans `com.kserocki.flix.app` for bindings; also provides the system clock (AGENTS.md §4). */
 @Module
 @ComponentScan("com.kserocki.flix.app")
-class AppModule
+class AppModule {
+
+    @Single
+    fun clock(): Clock = Clock.System
+}
