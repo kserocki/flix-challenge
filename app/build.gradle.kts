@@ -13,7 +13,7 @@ android {
         versionName = "0.1.0"
     }
 
-    // AGP 9 has buildConfig off by default; LogcatDataLogger reads BuildConfig.DEBUG (plan #3).
+    // AGP 9 has buildConfig off by default; LogcatDataLogger reads BuildConfig.DEBUG.
     buildFeatures {
         buildConfig = true
     }
@@ -27,7 +27,7 @@ kotlin {
 }
 
 koinCompiler {
-    // Demotes the "Kotlin 2.4.21 newer than verified" plugin note: not a real defect (plan #3).
+    // Demotes the "Kotlin 2.4.21 newer than verified" plugin note: not a real defect.
     versionCheckSeverity = "info"
 }
 

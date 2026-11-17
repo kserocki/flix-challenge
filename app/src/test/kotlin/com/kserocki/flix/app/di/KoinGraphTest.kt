@@ -10,7 +10,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.time.Clock
 
-/** Resolves the full application graph the way [FlixKoinApplication] assembles it (plan #3). */
+/** Resolves the full application graph the way [FlixKoinApplication] assembles it. */
 class KoinGraphTest {
 
     private val koinApp = koinApplication<FlixKoinApplication>()

@@ -7,7 +7,8 @@ import kotlinx.io.IOException
 /**
  * [ResponseException] (non-2xx) → [DomainError.Server]; any [IOException] (timeouts, no
  * connection, Darwin errors) → [DomainError.Network]; anything else (malformed JSON, a
- * non-JSON body, …) → [DomainError.InvalidData] as a fallback (Q3).
+ * non-JSON body, …) → [DomainError.InvalidData] as a fallback (`docs/domain/API.md` "Errors to
+ * expect", ADR-0009).
  */
 internal fun Exception.toDomainError(): DomainError =
     when (this) {
