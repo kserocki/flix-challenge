@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Flix" parent="android:Theme.Material.NoActionBar" />
+    <!-- Night variant of the window background: core:designsystem's dark surface token
+         (theme/Color.kt), so the cold-start window matches dark mode too. -->
+    <style name="Theme.Flix" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/flix_window_background</item>
+    </style>
 </resources>
