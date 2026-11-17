@@ -8,7 +8,8 @@ Per screen:
 - `XIntent`: a `sealed interface` of user actions (`Retry`, `Refresh`).
 - `XEffect` (optional): a `sealed interface` of one-off events (for example a snackbar). It's delivered with a `Channel` and consumed once.
 - `XViewModel`: `val state: StateFlow<XUiState>`, `fun onIntent(intent: XIntent)`, and optionally `val effects: Flow<XEffect>`. State changes only inside the ViewModel through `update { }`.
-- `XScreen` (stateful) collects the state with `collectAsStateWithLifecycle()` and passes it to `XContent(state, onIntent, modifier)` (stateless, previewable).
+- `XScreen` (stateful) collects the state with `collectAsStateWithLifecycle()`, collects effects in `LaunchedEffect(Unit)` under `repeatOnLifecycle(STARTED)`, and passes the state to `XContent(state, onIntent, modifier)` (stateless, previewable; it may also take hoisted UI holders such as a `SnackbarHostState`).
+- One load at a time: an intent that arrives while a load is running is ignored.
 - No reducer framework and no middleware ("lite"): a `when (intent)` in `onIntent` is enough at this size.
 
 ## Consequences
