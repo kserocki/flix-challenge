@@ -8,6 +8,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.kserocki.flix.feature.timetable.api.TimetableNavKey
+import com.kserocki.flix.feature.timetable.impl.navigation.timetableEntry
 
 /** The app's single back stack. Today it only ever holds the timetable screen. */
 @Composable
@@ -22,7 +23,7 @@ fun FlixNavHost(modifier: Modifier = Modifier) {
             rememberViewModelStoreNavEntryDecorator(),
         ),
         entryProvider = entryProvider {
-            entry<TimetableNavKey> { TimetablePlaceholder() }
+            timetableEntry()
         },
     )
 }
