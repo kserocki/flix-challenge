@@ -51,7 +51,7 @@ docs/                         Architecture, ADRs, domain knowledge
 
 ## 4. Conventions
 
-- **Screens, MVI-lite with UDF** (ADR-0004): `XUiState` (immutable data class, `ImmutableList` for lists), `sealed interface XIntent`, optional `sealed interface XEffect` for one-off events. `XViewModel` exposes `val state: StateFlow<XUiState>` and `fun onIntent(intent: XIntent)`. Stateful `XScreen` (gets the VM via `koinViewModel()`) → stateless `XContent(state, onIntent, modifier)` with a `@Preview` per state, light and dark. Only `XContent` knows `XIntent`. Child composables take plain values and lambdas.
+- **Screens, MVI-lite with UDF** (ADR-0004): `XUiState` (immutable data class, `ImmutableList` for lists), `sealed interface XIntent`, optional `sealed interface XEffect` for one-off events. `XViewModel` exposes `val state: StateFlow<XUiState>` and `fun onIntent(intent: XIntent)`. Stateful `XScreen` (gets the VM via `koinViewModel()`) → stateless `XContent(state, onIntent, modifier)` with a `@Preview` per state, light and dark. Only `XContent` knows `XIntent`. Child composables take plain values and lambdas. Effect keys: collect one-off effects in `LaunchedEffect(Unit)`. Key an effect only on values whose change must restart it, and never on stable holders (`SnackbarHostState`, the ViewModel, resources).
 - **Use cases:** `VerbNounUseCase`, one `operator fun invoke`, no Android types.
 - **Repositories:** interface in `core:domain` (`DepartureRepository`), implementation in `core:data` (`NetworkDepartureRepository`).
 - **Errors:** repositories and use cases return `Result<T, DomainError>` (our own type in `core:common`, not `kotlin.Result`). No exceptions across layer boundaries. Never swallow `CancellationException` (use `suspendRunCatching`).
