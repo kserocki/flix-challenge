@@ -20,7 +20,7 @@ import com.kserocki.flix.core.designsystem.theme.FlixTheme
 @Composable
 fun FlixLoadingIndicator(contentDescription: String, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.semantics { this.contentDescription = contentDescription },
+        modifier = modifier.semantics(mergeDescendants = true) { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
