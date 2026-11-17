@@ -13,13 +13,13 @@ tools: Read, Grep, Glob, Bash, Write
 
 ## Driving the app: Trailblaze (ADR-0011)
 Load the `trailblaze` skill first (`.claude/skills/trailblaze/SKILL.md`, or `trailblaze skill show`). The binary is `~/.trailblaze/bin/trailblaze`.
-- `trailblaze device connect android`, then per step `trailblaze snapshot` to read the screen, and act with `trailblaze tool <tap|swipe|…> ref=<ref> -s "<intent>"`. **Always pass `-s`** with the user-level intent ("Pull to refresh the departures list"). It powers replay and self-repair.
+- `trailblaze device connect android`, then per step `trailblaze snapshot` to read the screen, and act with `trailblaze tool <tap|swipe|…> ref=<ref> -s "<intent>"`. **Always pass `-s`** with the user-level intent ("Pull to refresh the departures list"). It names the step in the saved trail and the run report.
 - Prefer refs from the snapshot over coordinates. If an element has no usable ref or label, that's an accessibility finding: report it.
 - When a scenario passes, save it: `trailblaze session save -t "<scenario>"` → `trails/<scenario>/trail.yaml`. Trails assert **structure**, never specific lines or times (the API is live). Replay it once (`trailblaze run trails/<scenario>`) to prove it's deterministic.
 - Copy the run report's screenshots you need into `.claude/work/<N>/media/`. Look at every screenshot you cite (Read tool) before you describe it.
 - If an existing trail breaks because of an **intended** UI change from the plan, re-record it. Never hand-edit the recorded actions to make one pass.
 
-### Trailblaze pitfalls (learned in #1)
+### Trailblaze pitfalls
 - **The daemon pins its workspace to the cwd of the first command that boots it.** Before any `trailblaze` call, `cd` into the worktree and run `trailblaze app --stop`, so it reboots there. Always check the path that `session save` prints.
 - Assertions may need an explicit `--target=default` even when only one target exists.
 - Read the param names with `trailblaze tool <name> --help` (for example `pressKey` takes `keyCode`).
@@ -29,7 +29,7 @@ Load the `trailblaze` skill first (`.claude/skills/trailblaze/SKILL.md`, or `tra
 
 ## Device settings (adb, not Trailblaze)
 - Offline: `adb shell cmd connectivity airplane-mode enable` **and** `adb shell svc wifi disable && adb shell svc data disable`, because on these emulators airplane mode can leave Wi-Fi on. Reverse all three afterwards. Replaying `trails/timetable-offline-error` needs the same setup first.
-- Device time zone: `adb shell service call alarm 3 s16 America/New_York`. Confirm with `adb shell getprop persist.sys.timezone`. Compare the shown times with the real API (curl from `docs/domain/API.md`) converted to the station zone.
+- Device time zone: `adb shell service call alarm 3 s16 America/New_York`. Confirm with `adb shell getprop persist.sys.timezone`. Compare the shown times with the real API (curl from `docs/domain/API.md`) converted to the station zone. Replaying `trails/timetable-foreign-device-zone` needs this zone set first; restore the original zone afterwards.
 - Dark mode: `adb shell cmd uimode night yes|no`. Font scale: `adb shell settings put system font_scale 2.0`. Rotation: `adb shell settings put system user_rotation 1`.
 
 ## Report
@@ -60,5 +60,5 @@ question: <one precise question; offer options if you have them>
 
 ## Long-running commands
 - Always pass the Bash `timeout` to Gradle, adb and emulator calls. Start the emulator in the background and poll with a bounded loop (for example 60×5 s).
-- Run the narrowest Gradle task that proves the point (`:core:domain:allTests`), and keep `./gradlew check` for the end.
+- Run the narrowest Gradle task that proves the point (`:core:domain:testAndroidHostTest`), and keep `./gradlew check` for the end.
 - Commit each verified logical piece right away, so a stall loses little work.

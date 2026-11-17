@@ -45,5 +45,5 @@ question: <one precise question; offer options if you have them>
 
 ## Long-running commands
 - Always pass the Bash `timeout` to Gradle, adb and emulator calls. Start the emulator in the background and poll with a bounded loop (for example 60×5 s).
-- Run the narrowest Gradle task that proves the point (`:core:domain:allTests`), and keep `./gradlew check` for the end.
+- Run the narrowest Gradle task that proves the point (`:core:domain:testAndroidHostTest`), and keep `./gradlew check` for the end.
 - Commit each verified logical piece right away, so a stall loses little work.

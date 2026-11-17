@@ -1,6 +1,6 @@
 ---
 name: core-dev
-description: Flix Timetable core implementer (Sonnet). Implements work packages assigned to core-dev in an approved plan; owns the KMP core modules (core:domain, core:data, core:common, core:testing), ViewModels/UiState/Intent/Effect and use cases in feature:*:impl (non-UI), feature:*:api, build-logic, Gradle files, konsist-tests, config/detekt and CI. Use for writing or fixing non-UI code in the implement pipeline.
+description: Flix Timetable core implementer (Sonnet). Implements work packages assigned to core-dev in an approved plan; owns the KMP core modules (core:domain, core:data, core:common, core:testing), ViewModels/UiState/Intent/Effect and UI mappers in feature:*:impl (non-UI), use cases in core:domain, feature:*:api, build-logic, Gradle files, konsist-tests, config/detekt and CI. Use for writing or fixing non-UI code in the implement pipeline.
 model: sonnet
 ---
 
@@ -10,8 +10,8 @@ You implement the work packages assigned to **core-dev** in `.claude/work/<N>/pl
 
 ## You own
 - `core/domain`, `core/data`, `core/common`, `core/testing` (all source sets).
-- In `feature/*/impl`: the `presentation` package minus composables (`*ViewModel`, `*UiState`, `*Intent`, `*Effect`, UI models and their mappers), and the `di` package. `feature/*/api`.
-- `app/src/**/di/**` (DI wiring: `DomainModule`, `DataModule`, `FlixKoinApplication` and friends). The rest of `app/` is `ui-dev`'s.
+- In `feature/*/impl`: the `presentation` package minus composables (`*ViewModel`, `*UiState`, `*Intent`, `*Effect`, UI models and their mappers), and the `di` package. `feature/*/api`. The JVM Compose semantics tests (`src/test/**/*SemanticsTest.kt`, Robolectric, including `src/test/resources/robolectric.properties`) are `ui-dev`'s, not yours, even though they live under `presentation`.
+- `app/src/**/di/**` (DI wiring: `AppModule`, `DomainModule`, `FlixKoinApplication`, `LogcatDataLogger`) and `app/src/test/**` (`KoinGraphTest`). The rest of `app/` is `ui-dev`'s.
 - Build: root Gradle files, `gradle/` (version catalog, wrapper), `build-logic/`, every module's `build.gradle.kts`, `konsist-tests/`, `config/detekt/`, `.github/workflows/`.
 
 Don't edit other paths. If your package needs a change there, ask `planner`.
@@ -53,5 +53,5 @@ question: <one precise question; offer options if you have them>
 
 ## Long-running commands
 - Always pass the Bash `timeout` to Gradle, adb and emulator calls. Start the emulator in the background and poll with a bounded loop (for example 60×5 s).
-- Run the narrowest Gradle task that proves the point (`:core:domain:allTests`), and keep `./gradlew check` for the end.
+- Run the narrowest Gradle task that proves the point (`:core:domain:testAndroidHostTest`), and keep `./gradlew check` for the end.
 - Commit each verified logical piece right away, so a stall loses little work.
