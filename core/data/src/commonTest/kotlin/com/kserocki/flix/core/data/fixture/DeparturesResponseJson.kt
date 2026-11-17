@@ -26,6 +26,9 @@ internal fun departuresResponseJson(
     return "{${fields.joinToString(",")}}"
 }
 
+/** A response with a literal `"rides": null`, distinct from a missing `rides` key (TT-16b). */
+internal fun departuresResponseJsonWithNullRides(): String = "{\"station\":$BERLIN_STATION_JSON,\"rides\":null}"
+
 /** Builds one ride, leaving out each key whose argument is `null` (TT-16). */
 internal fun rideJson(
     id: String? = "96e32f9f-ba2b-4690-affb-12a3caebc06d",

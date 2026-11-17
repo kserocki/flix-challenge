@@ -3,11 +3,13 @@ package com.kserocki.flix.core.data.repository
 import com.kserocki.flix.core.common.result.Result
 import com.kserocki.flix.core.data.fixture.REAL_DEPARTURES_RESPONSE
 import com.kserocki.flix.core.data.fixture.departuresResponseJson
+import com.kserocki.flix.core.data.fixture.departuresResponseJsonWithNullRides
 import com.kserocki.flix.core.data.fixture.rideJson
 import com.kserocki.flix.core.data.logging.RecordingDataLogger
 import com.kserocki.flix.core.data.network.FlixApiClient
 import com.kserocki.flix.core.data.network.createFlixHttpClient
 import com.kserocki.flix.core.domain.error.DomainError
+import com.kserocki.flix.core.domain.model.Departure
 import com.kserocki.flix.core.domain.model.StationTimetable
 import com.kserocki.flix.core.domain.model.TimetableWindow
 import io.ktor.client.engine.mock.MockEngine
@@ -69,6 +71,15 @@ class NetworkDepartureRepositoryTest {
                 "846fad51-24a3-4ae2-9ac1-e93d8a370a62",
             ),
             result.value.departures.map { it.id },
+        )
+        assertEquals(
+            Departure(
+                id = "3277af6c-c109-40f0-8c57-57af98761198",
+                lineCode = "050",
+                direction = "Hamburg central bus station",
+                scheduledAt = Instant.parse("2026-11-16T16:30:00Z"),
+            ),
+            result.value.departures[1],
         )
     }
 
@@ -166,6 +177,13 @@ class NetworkDepartureRepositoryTest {
     }
 
     @Test
+    fun `returns invalid data when rides are null`() = runTest {
+        val repository = repositoryWith(jsonEngine(departuresResponseJsonWithNullRides()))
+
+        assertEquals(Result.Failure(DomainError.InvalidData), repository.getTimetable(A_WINDOW))
+    }
+
+    @Test
     fun `returns an empty timetable for an empty ride list`() = runTest {
         val repository = repositoryWith(jsonEngine(departuresResponseJson(rides = emptyList())))
 
@@ -187,12 +205,21 @@ class NetworkDepartureRepositoryTest {
     @Test
     fun `logs each skipped ride when debug logging is enabled`() = runTest {
         val logger = RecordingDataLogger(isEnabled = true)
-        val body = departuresResponseJson(rides = listOf(rideJson(id = "ok"), rideJson(id = null)))
+        val body = departuresResponseJson(
+            rides = listOf(
+                rideJson(id = "ok"),
+                rideJson(id = "broken-1", code = null),
+                rideJson(id = "broken-2", direction = null),
+            ),
+        )
         val repository = repositoryWith(jsonEngine(body), logger)
 
         repository.getTimetable(A_WINDOW)
 
-        assertTrue(logger.messages.isNotEmpty())
+        val skipMessages = logger.messages.filter { it.contains("Skipped ride") }
+        assertEquals(2, skipMessages.size)
+        assertTrue(skipMessages.any { it.contains("broken-1") })
+        assertTrue(skipMessages.any { it.contains("broken-2") })
     }
 
     @Test
