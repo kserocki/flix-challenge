@@ -23,6 +23,9 @@ The Koin compiler plugin's own docs confirm this: *"every Gradle module that dec
 - **Option D: `core:domain` is Koin-free.** No `koin-annotations`, no compiler plugin, no `@Factory`. Use cases are plain classes with a constructor. `app`'s `DomainModule` (an `@Module`, no `@ComponentScan`) has one explicit `@Factory` provider function per use case, for example `fun getStationTimetableUseCase(repository: DepartureRepository, clock: Clock): GetStationTimetableUseCase`. This is a documented exception to "provider functions only for third-party types": the domain's purity matters more than avoiding one line of repetition per use case.
 - Koin is started only in `app` (`FlixApplication`).
 
+## Multi-module verification (plan #3)
+`core:data` applies `flix.koin` and declares its own `@Module @ComponentScan` (`DataModule`), including a binding (`HttpClient`) that needs a type (`DataLogger`) bound only in `app`. `app` is where the full graph is actually checked: it applies the plugin too, registers every module (`AppModule`, `DomainModule`, `DataModule`) on `FlixKoinApplication`, and compiles with `allWarningsAsErrors = true`, so `KOIN-W008` ("graph not verified … missing hints") fails the build instead of only warning. `koinCompiler { versionCheckSeverity = "info" }` demotes the plugin's own "Kotlin version newer than verified" note, which isn't a defect. Verified by removing `core:data`'s plugin application (keeping the raw `koin-core`/`koin-annotations` dependencies) and rebuilding `app`: it fails with exactly `KOIN-W008`; reverting fixes it (impl-log #3). The platform HTTP engine (OkHttp/Darwin) is a plain Kotlin `expect`/`actual` function, not a per-platform Koin module, since picking an engine is not a DI concern.
+
 ## Alternatives
 - Hilt: Android-only, can't be used in KMP `commonMain`.
 - Koin DSL only: no compile-time safety.
