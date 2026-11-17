@@ -60,7 +60,7 @@ internal fun TimetableScreen(modifier: Modifier = Modifier, viewModel: Timetable
     val retryActionLabel = stringResource(R.string.timetable_action_retry)
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(viewModel, snackbarHostState, lifecycleOwner, resources, retryActionLabel) {
+    LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             // collectLatest: an effect that arrives while a snackbar is still showing replaces it
             // immediately (cancelling the suspended showSnackbar call dismisses its snackbar).
@@ -82,7 +82,7 @@ internal fun TimetableScreen(modifier: Modifier = Modifier, viewModel: Timetable
 
     // A refresh that succeeds sends no effect, so a stale refresh-error snackbar from an earlier
     // failure wouldn't otherwise be replaced; dismiss it as soon as a new refresh starts.
-    LaunchedEffect(state.isRefreshing, snackbarHostState) {
+    LaunchedEffect(state.isRefreshing) {
         if (state.isRefreshing) {
             snackbarHostState.currentSnackbarData?.dismiss()
         }
