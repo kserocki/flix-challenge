@@ -274,12 +274,39 @@ class TimetableViewModelTest {
 
         repository.responseGate = CompletableDeferred()
         viewModel.onIntent(TimetableIntent.Refresh)
-        viewModel.onIntent(TimetableIntent.Refresh)
+        advanceUntilIdle()
 
-        repository.responseGate?.complete(Unit)
+        viewModel.onIntent(TimetableIntent.Refresh)
         advanceUntilIdle()
 
         assertEquals(2, repository.requestedWindows.size)
+
+        repository.responseGate?.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `refresh is ignored while loading`() = runTest(dispatcher) {
+        val repository = FakeDepartureRepository()
+        val viewModel = viewModel(repository)
+
+        viewModel.onIntent(TimetableIntent.Refresh)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.requestedWindows.size)
+    }
+
+    @Test
+    fun `refresh is ignored while the full screen error is shown`() = runTest(dispatcher) {
+        val repository = FakeDepartureRepository(nextResult = Result.Failure(DomainError.Network))
+        val viewModel = viewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onIntent(TimetableIntent.Refresh)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.requestedWindows.size)
+        assertEquals(TimetableBoard.Error(TimetableErrorReason.Network), viewModel.state.value.board)
     }
 
     @Test
