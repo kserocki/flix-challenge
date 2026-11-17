@@ -14,7 +14,7 @@ The behaviour the app must have. Every rule has an id, so tests and reviews can 
 
 ## Time zones
 - **TT-7** Departure time is converted with `station.timezone` from the response, **never** with the device zone. A device in `America/New_York` shows Berlin departures in Berlin time.
-- **TT-8** The station header shows the station name and the zone the times are in: the IANA id plus the UTC offset at the first departure's instant (or at `now` if the list is empty), for example `Europe/Berlin (UTC+1)`, or `UTC+2` in summer. A fixed-offset zone shows only the offset (`UTC`, `UTC+5:30`). Platform abbreviations (`CET`/`CEST`) aren't used: Android's locale data gives `GMT+01:00` for them, so they'd differ between platforms and tests.
+- **TT-8** The station header shows the station name and the zone the times are in: the IANA id plus the UTC offset at the first departure's instant (or at `now` if the list is empty), for example `Europe/Berlin (UTC+1)`, or `Europe/Berlin (UTC+2)` in summer. A fixed-offset zone shows only the offset (`UTC`, `UTC+5:30`). Platform abbreviations (`CET`/`CEST`) aren't used: Android's locale data gives `GMT+01:00` for them, so they'd differ between platforms and tests.
 - **TT-9** If the time zone is missing, blank or can't be resolved by kotlinx-datetime, the response counts as invalid data (`DomainError.InvalidData`). Resolvable non-region ids (`UTC`, `+01:00`) are accepted, because they still give correct times. We never fall back to UTC or to the device zone silently, because showing a wrong time is worse than showing an error.
 
 ## Days
